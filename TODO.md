@@ -39,3 +39,15 @@ Legend: [ ] open · [~] in progress · [x] done and checked by the main agent
 - [x] 7.2 Rulebook as baseline: bending a rule = "Needs sign-off", not a refusal; only the impossible is refused; `--strict` shows the old behaviour
 - [x] 7.3 Independent data check by GPT 6.2 Sol (Codex) — done; refund figure and product-flag wording fixed
 - [ ] 7.4 Shaun's full design system — waiting for the user's upload
+
+## Phase 8 — one console screen, replayed as live (agreed 15:45)
+- [x] 8.1 Pick a real October 2026 night that is in the ES plan, the ops log and the Infrabel files
+- [x] 8.2 Public-data file for that night: planned + actual times per Belgian point (Infrabel, CC0)
+- [x] 8.3 Scenario for that night: incident, options, prices, documents
+- [x] 8.4 Console screen in Shaun's look: header + clock + decide-by countdown, incident bar, six-train strip
+- [x] 8.5 Map panel, six-check board, planner's call (choose, arm, confirm, recorded), event log, audit footer
+- [x] 8.6 Detail pages behind "More info": action, case file, documents, whole-plan scan
+- [x] 8.7 Friday case on the same screen (no countdown: the rulebook gives no date)
+- [x] 8.8 View every screen and detail page; fix
+- [x] 8.9 Re-record the backup video; update SUBMISSION.md
+- [ ] 8.10 Two timed run-throughs; push when the ES repo link is known

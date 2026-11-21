@@ -1,0 +1,473 @@
+{
+ "source": "Infrabel open data, monthly punctuality file 202610.csv",
+ "licence": "CC0",
+ "url": "https://opendata.infrabel.be/explore/dataset/stiptheid-gegevens-maandelijksebestanden/",
+ "date": "2026-10-05",
+ "train": "401",
+ "points": [
+  {
+   "name": "Brussel-Zuid",
+   "plan_arr": "",
+   "plan_dep": "17:17:00",
+   "real_arr": "",
+   "real_dep": "20:03:35",
+   "delay_arr_s": null,
+   "delay_dep_s": 9995
+  },
+  {
+   "name": "Brussel-Kapellekerk",
+   "plan_arr": "17:19:00",
+   "plan_dep": "17:19:00",
+   "real_arr": "20:05:33",
+   "real_dep": "20:05:33",
+   "delay_arr_s": 9993,
+   "delay_dep_s": 9993
+  },
+  {
+   "name": "Brussel-Centraal",
+   "plan_arr": "17:20:00",
+   "plan_dep": "17:20:00",
+   "real_arr": "20:06:29",
+   "real_dep": "20:06:29",
+   "delay_arr_s": 9989,
+   "delay_dep_s": 9989
+  },
+  {
+   "name": "Brussel-Congres",
+   "plan_arr": "17:22:00",
+   "plan_dep": "17:22:00",
+   "real_arr": "20:07:36",
+   "real_dep": "20:07:36",
+   "delay_arr_s": 9936,
+   "delay_dep_s": 9936
+  },
+  {
+   "name": "Brussel-Noord",
+   "plan_arr": "17:24:00",
+   "plan_dep": "17:24:00",
+   "real_arr": "20:09:22",
+   "real_dep": "20:09:22",
+   "delay_arr_s": 9922,
+   "delay_dep_s": 9922
+  },
+  {
+   "name": "Schaarbeek",
+   "plan_arr": "18:25:43",
+   "plan_dep": "18:25:43",
+   "real_arr": "20:13:10",
+   "real_dep": "20:13:10",
+   "delay_arr_s": 6447,
+   "delay_dep_s": 6447
+  },
+  {
+   "name": "Haren-Zuid",
+   "plan_arr": "18:27:13",
+   "plan_dep": "18:27:13",
+   "real_arr": "20:16:51",
+   "real_dep": "20:16:51",
+   "delay_arr_s": 6578,
+   "delay_dep_s": 6578
+  },
+  {
+   "name": "Diegem",
+   "plan_arr": "18:28:11",
+   "plan_dep": "18:28:11",
+   "real_arr": "20:17:56",
+   "real_dep": "20:17:56",
+   "delay_arr_s": 6585,
+   "delay_dep_s": 6585
+  },
+  {
+   "name": "Zaventem",
+   "plan_arr": "18:29:07",
+   "plan_dep": "18:29:07",
+   "real_arr": "20:18:45",
+   "real_dep": "20:18:45",
+   "delay_arr_s": 6578,
+   "delay_dep_s": 6578
+  },
+  {
+   "name": "Nossegem",
+   "plan_arr": "18:30:17",
+   "plan_dep": "18:30:17",
+   "real_arr": "20:19:51",
+   "real_dep": "20:19:51",
+   "delay_arr_s": 6574,
+   "delay_dep_s": 6574
+  },
+  {
+   "name": "Kortenberg",
+   "plan_arr": "18:31:34",
+   "plan_dep": "18:31:34",
+   "real_arr": "20:20:56",
+   "real_dep": "20:20:56",
+   "delay_arr_s": 6562,
+   "delay_dep_s": 6562
+  },
+  {
+   "name": "Erps-Kwerps",
+   "plan_arr": "18:32:58",
+   "plan_dep": "18:32:58",
+   "real_arr": "19:31:28",
+   "real_dep": "19:31:28",
+   "delay_arr_s": 3510,
+   "delay_dep_s": 3510
+  },
+  {
+   "name": "Veltem",
+   "plan_arr": "18:34:31",
+   "plan_dep": "18:34:31",
+   "real_arr": "20:23:26",
+   "real_dep": "20:23:26",
+   "delay_arr_s": 6535,
+   "delay_dep_s": 6535
+  },
+  {
+   "name": "Herent",
+   "plan_arr": "18:35:53",
+   "plan_dep": "18:35:53",
+   "real_arr": "20:24:29",
+   "real_dep": "20:24:29",
+   "delay_arr_s": 6516,
+   "delay_dep_s": 6516
+  },
+  {
+   "name": "Leuven",
+   "plan_arr": "18:38:21",
+   "plan_dep": "18:38:21",
+   "real_arr": "20:27:05",
+   "real_dep": "20:27:05",
+   "delay_arr_s": 6524,
+   "delay_dep_s": 6524
+  },
+  {
+   "name": "Vertrijk",
+   "plan_arr": "18:44:07",
+   "plan_dep": "18:44:07",
+   "real_arr": "20:55:08",
+   "real_dep": "20:55:08",
+   "delay_arr_s": 7861,
+   "delay_dep_s": 7861
+  },
+  {
+   "name": "Tienen",
+   "plan_arr": "18:48:20",
+   "plan_dep": "18:48:20",
+   "real_arr": "21:00:27",
+   "real_dep": "21:00:27",
+   "delay_arr_s": 7927,
+   "delay_dep_s": 7927
+  },
+  {
+   "name": "Ezemaal",
+   "plan_arr": "18:52:31",
+   "plan_dep": "18:52:31",
+   "real_arr": "21:06:10",
+   "real_dep": "21:06:10",
+   "delay_arr_s": 8019,
+   "delay_dep_s": 8019
+  },
+  {
+   "name": "Neerwinden",
+   "plan_arr": "18:53:54",
+   "plan_dep": "18:53:54",
+   "real_arr": "21:10:20",
+   "real_dep": "21:10:20",
+   "delay_arr_s": 8186,
+   "delay_dep_s": 8186
+  },
+  {
+   "name": "Landen",
+   "plan_arr": "18:55:37",
+   "plan_dep": "18:55:37",
+   "real_arr": "21:13:46",
+   "real_dep": "21:13:46",
+   "delay_arr_s": 8289,
+   "delay_dep_s": 8289
+  },
+  {
+   "name": "Waremme",
+   "plan_arr": "19:01:59",
+   "plan_dep": "19:01:59",
+   "real_arr": "21:21:06",
+   "real_dep": "21:21:06",
+   "delay_arr_s": 8347,
+   "delay_dep_s": 8347
+  },
+  {
+   "name": "Bleret",
+   "plan_arr": "19:03:13",
+   "plan_dep": "19:03:13",
+   "real_arr": "21:22:21",
+   "real_dep": "21:22:21",
+   "delay_arr_s": 8348,
+   "delay_dep_s": 8348
+  },
+  {
+   "name": "Remicourt",
+   "plan_arr": "19:04:24",
+   "plan_dep": "19:04:24",
+   "real_arr": "21:23:36",
+   "real_dep": "21:23:36",
+   "delay_arr_s": 8352,
+   "delay_dep_s": 8352
+  },
+  {
+   "name": "Momalle",
+   "plan_arr": "19:06:01",
+   "plan_dep": "19:06:01",
+   "real_arr": "21:25:03",
+   "real_dep": "21:25:03",
+   "delay_arr_s": 8342,
+   "delay_dep_s": 8342
+  },
+  {
+   "name": "Fexhe-Le-Haut-Clocher",
+   "plan_arr": "19:07:05",
+   "plan_dep": "19:07:05",
+   "real_arr": "21:25:59",
+   "real_dep": "21:25:59",
+   "delay_arr_s": 8334,
+   "delay_dep_s": 8334
+  },
+  {
+   "name": "Voroux",
+   "plan_arr": "19:08:05",
+   "plan_dep": "19:08:05",
+   "real_arr": "21:26:53",
+   "real_dep": "21:26:53",
+   "delay_arr_s": 8328,
+   "delay_dep_s": 8328
+  },
+  {
+   "name": "Bierset-Awans",
+   "plan_arr": "19:08:59",
+   "plan_dep": "19:08:59",
+   "real_arr": "21:27:44",
+   "real_dep": "21:27:44",
+   "delay_arr_s": 8325,
+   "delay_dep_s": 8325
+  },
+  {
+   "name": "Ans",
+   "plan_arr": "19:11:28",
+   "plan_dep": "19:11:28",
+   "real_arr": "21:30:28",
+   "real_dep": "21:30:28",
+   "delay_arr_s": 8340,
+   "delay_dep_s": 8340
+  },
+  {
+   "name": "Liege-Guillemins",
+   "plan_arr": "19:16:43",
+   "plan_dep": "19:16:43",
+   "real_arr": "21:38:06",
+   "real_dep": "21:38:06",
+   "delay_arr_s": 8483,
+   "delay_dep_s": 8483
+  },
+  {
+   "name": "Angleur",
+   "plan_arr": "19:20:00",
+   "plan_dep": "19:20:00",
+   "real_arr": "21:47:50",
+   "real_dep": "21:47:50",
+   "delay_arr_s": 8870,
+   "delay_dep_s": 8870
+  },
+  {
+   "name": "Chenee",
+   "plan_arr": "19:22:00",
+   "plan_dep": "19:22:00",
+   "real_arr": "21:48:38",
+   "real_dep": "21:48:38",
+   "delay_arr_s": 8798,
+   "delay_dep_s": 8798
+  },
+  {
+   "name": "Chaudfontaine",
+   "plan_arr": "19:24:00",
+   "plan_dep": "19:24:00",
+   "real_arr": "21:54:07",
+   "real_dep": "21:54:07",
+   "delay_arr_s": 9007,
+   "delay_dep_s": 9007
+  },
+  {
+   "name": "Trooz",
+   "plan_arr": "19:26:00",
+   "plan_dep": "19:26:00",
+   "real_arr": "21:57:37",
+   "real_dep": "21:57:37",
+   "delay_arr_s": 9097,
+   "delay_dep_s": 9097
+  },
+  {
+   "name": "Olne",
+   "plan_arr": "19:27:00",
+   "plan_dep": "19:27:00",
+   "real_arr": "21:59:19",
+   "real_dep": "21:59:19",
+   "delay_arr_s": 9139,
+   "delay_dep_s": 9139
+  },
+  {
+   "name": "Fraipont",
+   "plan_arr": "19:29:00",
+   "plan_dep": "19:29:00",
+   "real_arr": "22:01:42",
+   "real_dep": "22:01:42",
+   "delay_arr_s": 9162,
+   "delay_dep_s": 9162
+  },
+  {
+   "name": "Nessonvaux",
+   "plan_arr": "19:29:00",
+   "plan_dep": "19:29:00",
+   "real_arr": "22:04:29",
+   "real_dep": "22:04:29",
+   "delay_arr_s": 9329,
+   "delay_dep_s": 9329
+  },
+  {
+   "name": "Pepinster",
+   "plan_arr": "19:33:00",
+   "plan_dep": "19:33:00",
+   "real_arr": "22:09:47",
+   "real_dep": "22:09:47",
+   "delay_arr_s": 9407,
+   "delay_dep_s": 9407
+  },
+  {
+   "name": "Verviers-Central",
+   "plan_arr": "19:36:00",
+   "plan_dep": "20:40:00",
+   "real_arr": "22:15:55",
+   "real_dep": "22:20:39",
+   "delay_arr_s": 9595,
+   "delay_dep_s": 6039
+  },
+  {
+   "name": "Verviers-Palais",
+   "plan_arr": "20:41:00",
+   "plan_dep": "20:41:00",
+   "real_arr": "22:22:09",
+   "real_dep": "22:22:09",
+   "delay_arr_s": 6069,
+   "delay_dep_s": 6069
+  },
+  {
+   "name": "Dolhain-Gileppe",
+   "plan_arr": "20:46:00",
+   "plan_dep": "20:46:00",
+   "real_arr": "22:26:48",
+   "real_dep": "22:26:48",
+   "delay_arr_s": 6048,
+   "delay_dep_s": 6048
+  },
+  {
+   "name": "Welkenraedt",
+   "plan_arr": "20:49:00",
+   "plan_dep": "20:49:00",
+   "real_arr": "22:30:21",
+   "real_dep": "22:30:21",
+   "delay_arr_s": 6081,
+   "delay_dep_s": 6081
+  },
+  {
+   "name": "Hergenrath",
+   "plan_arr": "20:54:00",
+   "plan_dep": "20:54:00",
+   "real_arr": "22:38:37",
+   "real_dep": "22:38:37",
+   "delay_arr_s": 6277,
+   "delay_dep_s": 6277
+  }
+ ],
+ "fleet": {
+  "453": {
+   "first": {
+    "name": "Brussel-Zuid",
+    "plan_arr": "",
+    "plan_dep": "18:06:00",
+    "real_arr": "",
+    "real_dep": "23:20:15",
+    "delay_arr_s": null,
+    "delay_dep_s": 18855
+   },
+   "last": {
+    "name": "Essen",
+    "plan_arr": "19:36:00",
+    "plan_dep": "19:36:00",
+    "real_arr": "0:30:00",
+    "real_dep": "0:30:00",
+    "delay_arr_s": 17640,
+    "delay_dep_s": 17640
+   },
+   "points": 32
+  },
+  "452": {
+   "first": {
+    "name": "Essen",
+    "plan_arr": "9:23:00",
+    "plan_dep": "9:23:00",
+    "real_arr": "9:31:27",
+    "real_dep": "9:31:27",
+    "delay_arr_s": 507,
+    "delay_dep_s": 507
+   },
+   "last": {
+    "name": "Brussel-Zuid",
+    "plan_arr": "10:27:00",
+    "plan_dep": "",
+    "real_arr": "10:29:23",
+    "real_dep": "",
+    "delay_arr_s": 143,
+    "delay_dep_s": null
+   },
+   "points": 27
+  },
+  "401": {
+   "first": {
+    "name": "Brussel-Zuid",
+    "plan_arr": "",
+    "plan_dep": "17:17:00",
+    "real_arr": "",
+    "real_dep": "20:03:35",
+    "delay_arr_s": null,
+    "delay_dep_s": 9995
+   },
+   "last": {
+    "name": "Hergenrath",
+    "plan_arr": "20:54:00",
+    "plan_dep": "20:54:00",
+    "real_arr": "22:38:37",
+    "real_dep": "22:38:37",
+    "delay_arr_s": 6277,
+    "delay_dep_s": 6277
+   },
+   "points": 42
+  },
+  "400": {
+   "first": {
+    "name": "Hergenrath",
+    "plan_arr": "9:03:00",
+    "plan_dep": "9:03:00",
+    "real_arr": "11:06:27",
+    "real_dep": "11:06:27",
+    "delay_arr_s": 7407,
+    "delay_dep_s": 7407
+   },
+   "last": {
+    "name": "Brussel-Zuid",
+    "plan_arr": "11:42:00",
+    "plan_dep": "",
+    "real_arr": "13:43:39",
+    "real_dep": "",
+    "delay_arr_s": 7299,
+    "delay_dep_s": null
+   },
+   "points": 63
+  }
+ }
+}

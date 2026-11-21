@@ -12,7 +12,8 @@ TEMPLATE = Path(__file__).with_name("template.html")
 TOKEN = "/*__RELAY_DATA__*/"
 
 REQUIRED = ("title", "network", "incident", "cars", "impact", "options", "chosen", "documents")
-OPTIONAL = {"subtitle": "", "generated_at": "", "findings": [], "validation": None, "assumptions": []}
+OPTIONAL = {"subtitle": "", "generated_at": "", "findings": [], "validation": None, "assumptions": [],
+            "live": None, "case_types": [], "user": ""}
 
 
 class ScenarioError(ValueError):

@@ -77,7 +77,39 @@ BASE_ASSUMPTIONS = [
 ]
 
 
-def assemble(name, title, subtitle, incident, scenario, plan, rules, network, costs, cars, findings, extra_assumptions):
+CASE_TYPES = [
+    ["Unavailable car (defect)", "built", "night scenarios: a car reported broken before departure"],
+    ["Changed release date from a workshop", "built", "the Friday case, rulebook §11: a car released earlier than planned"],
+    ["Maintenance deadline or workshop delay", "not built", ""],
+    ["Transfer of cars between lines", "partly", "appears as an action and as a PROPOSAL; not a case type of its own"],
+    ["Product or capacity mismatch", "partly", "found by the whole-plan scan; no actions generated yet"],
+    ["Late train or missed exchange", "not built", ""],
+    ["Unavailable shunting, transport or partner service", "not built", ""],
+    ["Timetable change", "not built", ""],
+]
+
+
+def _live(line, date, network):
+    """Public running data for that night, if scripts/public_night.py has cut it. None otherwise."""
+    p = REFERENCE / "public" / f"infrabel_{date}.json"
+    if not p.exists():
+        return None
+    pub = json.loads(p.read_text(encoding="utf-8"))
+    from relay.ingest.ops import load_ops
+    day = datetime.date.fromisoformat(date)
+    before = (day - datetime.timedelta(days=1)).isoformat()
+    rows = [{"line": n.line, "date": n.date, "dep_delay": n.dep_delay, "arr_delay": n.arr_delay, "pax": n.pax,
+             "pax_over_1h": n.pax_over_1h, "downgrades": n.downgrades, "cancellations": n.cancellations,
+             "note": n.note, "cite": f"{n.src.file} · {n.src.sheet}!{n.src.cell}"}
+            for n in load_ops() if n.date in (before, date) and (n.line == line or n.date == date)]
+    return {"date": date, "train": pub["train"], "planned_dep": pub["points"][0]["plan_dep"],
+            "source": pub["source"], "licence": pub["licence"], "url": pub["url"],
+            "points": pub["points"], "fleet": pub["fleet"], "ops": rows, "line": line,
+            "label": "REPLAY · ES workbook + Infrabel open data (CC0) · not a live feed"}
+
+
+def assemble(name, title, subtitle, incident, scenario, plan, rules, network, costs, cars, findings, extra_assumptions,
+             live=None):
     impact = impact_of(incident, scenario, plan=plan, network=network)
     # The options lane reads rules in the file's shape and calls check(steps, context); pass both
     # from the same (possibly overridden) rule set so a relaxed tier reaches the verdicts.
@@ -96,12 +128,26 @@ def assemble(name, title, subtitle, incident, scenario, plan, rules, network, co
     h = audit.append(log, decision_record(incident, chosen, options, USER, at))
     order = task_order_de(chosen, scenario, network=network,
                           supersedes=1 if scenario.get("first_order") else None, audit_hash=h)
+    by_option = {}
+    for o in options:
+        if o.refused or o.proposed:
+            continue
+        try:
+            by_option[o.id] = {
+                "task_order_de": task_order_de(o, scenario, network=network,
+                                               supersedes=1 if scenario.get("first_order") else None,
+                                               audit_hash=h if o.id == chosen.id else None),
+                "messages": partner_messages(o, scenario, impact, network=network)}
+        except Exception as e:  # a document we cannot draft is shown as missing, never invented
+            by_option[o.id] = {"error": f"{type(e).__name__}: {e}"}
     data = {
+        "live": live, "case_types": CASE_TYPES, "user": USER,
         "title": title, "subtitle": subtitle, "generated_at": at, "network": network,
         "incident": incident, "cars": cars,
         "impact": to_dict(impact), "options": to_dict(options), "chosen": chosen.id,
         "documents": {"task_order_de": order,
                       "messages": partner_messages(chosen, scenario, impact, network=network),
+                      "by_option": by_option,
                       "audit": {"hash": h, "prev": prev, "at": at, "user": USER}},
         "findings": to_dict(findings), "validation": _validation(),
         "assumptions": BASE_ASSUMPTIONS + extra_assumptions,
@@ -154,7 +200,11 @@ def night(plan, network, costs, line, date, car, strict):
     return assemble(name, f"Relay · {line} train, {date}", sub, incident, scenario, plan, rules, network, costs,
                     cars, check_day(plan, date, rules=rules, network=network, costs=costs),
                     ["Reserve candidates come from the plan grid; whether a car is physically fit is not in the data."]
-                    + (["WHAT IF: every baseline rule is applied as a hard refusal on this page."] if strict else []))
+                    + ([f"The plan cell for this night already shows code {cell.raw} (in train, not commercial): the grid records "
+                        "what was done. The actions are priced as if the car were still sold, the worst case."]
+                       if str(cell.raw) == "9" else [])
+                    + (["WHAT IF: every baseline rule is applied as a hard refusal on this page."] if strict else []),
+                    live=_live(line, date, network))
 
 
 def main(argv):
