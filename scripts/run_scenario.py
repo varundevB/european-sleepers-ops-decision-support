@@ -108,6 +108,34 @@ def _live(line, date, network):
             "label": "REPLAY · ES workbook + Infrabel open data (CC0) · not a live feed"}
 
 
+def _with(live, **more):
+    if live is not None:
+        live.update(more)
+    return live
+
+
+ORDER_SHEET = {"Prag": "Order Prag", "Paris": "Order Prs", "Milan": "Order Mln"}
+
+
+def _consist(plan, line, date):
+    """The train as the order sheet lists it under this date, joined to the plan cells. Order is the
+    sheet's row order; which end is the locomotive is not in the data."""
+    from relay.ingest.orders import load_orders
+    day = {c.car: c for c in plan.cells if c.line == line and c.date == date}
+    nxt = (datetime.date.fromisoformat(date) + datetime.timedelta(days=1)).isoformat()
+    after = {c.car: c.colour_meaning for c in plan.cells if c.line == line and c.date == nxt and c.colour_meaning}
+    out = []
+    for it in load_orders(known_cars=set(plan.cars))["items"]:
+        if it["sheet"] != ORDER_SHEET.get(line) or it["date_above"] != date:
+            continue
+        c = day.get(it["car"])
+        out.append({"uic": it["uic"], "car": it["car"], "type": it["text_after"], "pax_no": str(it["right_value"]),
+                    "code": c.raw if c else "", "kind": c.kind if c else "", "flag": c.colour_meaning if c else "",
+                    "next_day": after.get(it["car"], ""),
+                    "cite": f"{it['src'].sheet}!{it['src'].cell}" + (f" · {c.src.sheet}!{c.src.cell}" if c else "")})
+    return out
+
+
 def assemble(name, title, subtitle, incident, scenario, plan, rules, network, costs, cars, findings, extra_assumptions,
              live=None):
     impact = impact_of(incident, scenario, plan=plan, network=network)
@@ -140,11 +168,18 @@ def assemble(name, title, subtitle, incident, scenario, plan, rules, network, co
                 "messages": partner_messages(o, scenario, impact, network=network)}
         except Exception as e:  # a document we cannot draft is shown as missing, never invented
             by_option[o.id] = {"error": f"{type(e).__name__}: {e}"}
+    opts = to_dict(options)
+    try:  # CO2 is an estimate from reference/co2.json; left out if the module is not there
+        from relay.co2 import co2_of
+        for o in opts:
+            o["co2"] = co2_of(o)
+    except ImportError:
+        pass
     data = {
         "live": live, "case_types": CASE_TYPES, "user": USER,
         "title": title, "subtitle": subtitle, "generated_at": at, "network": network,
         "incident": incident, "cars": cars,
-        "impact": to_dict(impact), "options": to_dict(options), "chosen": chosen.id,
+        "impact": to_dict(impact), "options": opts, "chosen": chosen.id,
         "documents": {"task_order_de": order,
                       "messages": partner_messages(chosen, scenario, impact, network=network),
                       "by_option": by_option,
@@ -204,7 +239,7 @@ def night(plan, network, costs, line, date, car, strict):
                         "what was done. The actions are priced as if the car were still sold, the worst case."]
                        if str(cell.raw) == "9" else [])
                     + (["WHAT IF: every baseline rule is applied as a hard refusal on this page."] if strict else []),
-                    live=_live(line, date, network))
+                    live=_with(_live(line, date, network), consist=_consist(plan, line, date)))
 
 
 def main(argv):
