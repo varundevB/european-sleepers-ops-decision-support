@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local operational decision support for European Sleeper fleet planning.">
+  <meta name="color-scheme" content="light dark">
+  <title>Sleeper Operations</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Sleeper Operations home"><span class="brand-mark">ES</span><span>Sleeper <strong>Operations</strong></span></a>
+    <nav class="main-nav" role="tablist" aria-label="Workspace">
+      <button type="button" id="tab-decisions" role="tab" aria-controls="view-decisions" aria-selected="true" data-tab="decisions">Decision desk</button>
+      <button type="button" id="tab-fleet" role="tab" aria-controls="view-fleet" aria-selected="false" data-tab="fleet">Fleet &amp; running data</button>
+      <button type="button" id="tab-log" role="tab" aria-controls="view-log" aria-selected="false" data-tab="log">Decision log</button>
+    </nav>
+    <span class="local-label">Local workspace</span>
+  </header>
+
+  <div class="app-shell">
+    <div id="global-error" class="notice error-notice" role="alert" hidden></div>
+    <div id="global-status" class="status-message" role="status" aria-live="polite"></div>
+    <section class="scope" aria-label="Choose a planning snapshot">
+      <form id="scope-form" class="scope-form">
+        <label>Train line<select id="line-picker" name="line" required disabled><option>Loading lines…</option></select></label>
+        <label>Planning date<input id="date-picker" name="date" type="date" required disabled></label>
+        <button class="button secondary" id="load-plan" type="submit" disabled>Load snapshot</button>
+      </form>
+      <div class="scope-context"><p id="route-label">Reading the local dataset…</p><p class="muted small" id="source-context">Spreadsheet snapshots, not a live train feed.</p></div>
+    </section>
+
+    <section id="view-decisions" role="tabpanel" aria-labelledby="tab-decisions">
+      <div class="page-heading"><div><div class="eyebrow">Decision support</div><h1>Operational decisions</h1><p class="muted">Compare actions, keep the evidence together, and record the next move.</p></div><button id="new-case-button" class="button primary" type="button">New case</button></div>
+      <div class="decision-layout">
+        <aside class="case-sidebar" aria-label="Saved operational cases"><div class="section-heading"><h2>Saved decisions</h2><span class="count" id="case-count">0</span></div><div id="case-list"><p class="muted small">Loading saved decisions…</p></div></aside>
+        <div class="decision-main">
+          <section id="new-case-panel" class="panel" aria-labelledby="new-case-title">
+            <div class="section-heading"><div><div class="eyebrow">Start with a known change</div><h2 id="new-case-title">Report an operational change</h2></div><span class="badge neutral">Original plan stays unchanged</span></div>
+            <form id="case-form" class="form-stack">
+              <label>Type of change<select id="case-type" required><option value="car_unavailable">Car unavailable</option></select></label>
+              <p id="case-type-description" class="field-help">Report a defect, extended repair, or another reason a planned car cannot run.</p>
+              <label><span id="affected-car-label">Affected car</span><select id="affected-car" required><option value="">Load a planning snapshot first</option></select></label>
+              <label>What changed?<textarea id="case-reason" required rows="3" maxlength="4000" placeholder="For example: the workshop has extended the repair and the car will miss this departure."></textarea></label>
+              <div class="form-row"><label>Affected passengers <span class="optional">optional</span><input id="affected-passengers" type="number" min="0" step="1" placeholder="Unknown"></label><p class="field-help">Enter a confirmed booking count. The train’s total passenger count does not identify the passengers booked in this car.</p></div>
+              <div id="case-context-fields" class="context-fields">
+                <label id="delay-field" hidden>Reported delay (minutes)<input id="context-delay" type="number" min="0" step="1" placeholder="Unknown"></label>
+                <label id="resource-field" hidden>Affected resource<input id="context-resource" type="text" maxlength="200" placeholder="For example: shunter, track, crew, workshop slot"></label>
+                <label id="product-field" hidden>Affected product<select id="context-product"><option value="">Not specified</option><option>Classic couchette</option><option>Comfort Standard</option><option>Comfort Plus</option><option>Seating</option></select></label>
+                <label id="capacity-field" hidden>Reported capacity shortfall<input id="context-capacity" type="number" min="0" step="1" placeholder="Unknown"></label>
+              </div>
+              <div class="form-actions"><p class="muted small" id="case-scope-label">The selected line and date will be saved with the case.</p><button id="create-case" data-mutation class="button primary" type="submit">Assess responses</button></div>
+            </form>
+          </section>
+          <div id="case-workspace" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-fleet" role="tabpanel" aria-labelledby="tab-fleet" hidden>
+      <div class="page-heading"><div><div class="eyebrow">Read-only source data</div><h1>Fleet &amp; running data</h1><p class="muted">Inspect the planning codes, source evidence, and recorded operating results.</p></div></div>
+      <div id="plan-summary"></div>
+      <div id="plan-issues"></div>
+      <section class="panel" aria-labelledby="fleet-table-title"><div class="section-heading"><h2 id="fleet-table-title">Car records for this snapshot</h2><label class="inline-check"><input id="assigned-only" type="checkbox">Assigned cars only</label></div><div class="table-scroll"><table class="data-table"><thead><tr><th scope="col">Car</th><th scope="col">Owner / type</th><th scope="col">Code / product</th><th scope="col">Status / location</th><th scope="col">Source</th></tr></thead><tbody id="fleet-body"></tbody></table></div><p class="small muted panel-footnote">Codes describe the car’s daily role. They do not establish its physical order, door orientation, technical release, or booking availability.</p></section>
+      <section class="panel" aria-labelledby="running-title" style="margin-top:20px"><h2 id="running-title">Recorded running results</h2><div id="running-data"></div></section>
+      <details class="source-warnings" id="source-warnings"><summary>Import notes and data limitations</summary><div id="warning-list"></div></details>
+    </section>
+
+    <section id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden><div class="page-heading"><div><div class="eyebrow">Persistent decision records</div><h1>Decision log</h1><p class="muted">Provisional choices, approvals, received updates, and handoff drafts.</p></div></div><div id="decision-log"></div></section>
+    <footer class="app-footer"><span>Decision support · original workbooks are read-only</span><span>Department instructions are drafts; messages are not sent automatically.</span></footer>
+  </div>
+</body>
+</html>

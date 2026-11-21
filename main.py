@@ -1,9 +1,6 @@
-"""Entry point for the European Sleepers operations decision-support tool."""
+"""Entry point for European Sleeper operations decision support."""
 
-
-def main() -> None:
-    """Run the placeholder application until the first workflow is defined."""
-    print("European Sleepers Operations Decision Support is being planned.")
+from app import main
 
 
 if __name__ == "__main__":

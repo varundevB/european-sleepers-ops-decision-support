@@ -1,23 +1,32 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-env/
+# Confidential source files and operational records stay local.
+*.xlsx
+*.xls
+*.csv
+*.docx
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+var/
+local-data/
+data/
+exports/
 .env
 .env.*
 !.env.example
-
-# IDEs and operating systems
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.playwright-mcp/
+*.log
+env/
 .idea/
 .vscode/
-.DS_Store
-
-# Build and test artifacts
 build/
 dist/
 *.egg-info/
-.pytest_cache/
 .coverage
 htmlcov/
