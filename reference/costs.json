@@ -14,5 +14,8 @@
              "cite": "§12: >1 hour 25% of the ticket back; >2 hours at destination 50%"},
   "avg_fare_eur": {"eur": 100, "assumption": true,
                    "cite": "ASSUMPTION: €41m ticket sales / 410,000 passengers from the ES opening briefing slide (2026-11-21) = €100. No ticket prices are in the data."},
-  "shunting_move": {"eur": null, "cite": "No euro price for a shunting move is in the rulebook. Counted as moves, not euros."}
+  "shunting_move": {"eur": 300, "assumption": true,
+                    "cite": "ASSUMPTION, ours: €300 per shunting move. The rulebook gives no price for a move; this is a placeholder to make options comparable. Replace with ES's figure."},
+  "lost_car": {"pax": 35, "assumption": true,
+               "cite": "ASSUMPTION: a car taken out displaces about 35 passengers (median passengers per commercial car over 1,005 logged nights, Weekinfo ÷ plan grid), priced at the average fare as if every one were refunded in full — the worst case."}
 }

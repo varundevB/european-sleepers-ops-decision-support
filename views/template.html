@@ -526,24 +526,25 @@ function stepOptions(side){
   for (const o of opts){
     const col = h("div", {class:"opt" + (o.refused ? " refused" : "") + (!o.refused && o.rank === 1 ? " rank1" : ""), "data-option":o.id});
     const tags = h("div", {class:"tags"});
-    if (o.refused) tags.append(h("span", {class:"pill", style:"background:#DC2626;color:#fff", text:"Refused"}));
+    if (o.refused) tags.append(h("span", {class:"pill", style:"background:#DC2626;color:#fff", text:"Not possible"}));
     else if (o.rank) tags.append(h("span", {class:"pill rank" + (o.rank === 1 ? " first" : ""), text:"#" + o.rank}));
     if (o.proposed) tags.append(h("span", {class:"pill prop", text:"Proposal — ours, not ES policy"}));
-    if (o.origin === "rulebook") tags.append(h("span", {class:"pill orig", text:"rulebook"}));
+    if (o.origin === "rulebook") tags.append(h("span", {class:"pill orig", text:o.id === "sent" ? "what ES sent" : "considered by ES"}));
+    if (!o.refused && arr(o.needs_signoff).length) tags.append(h("span", {class:"pill", style:"background:#EA580C;color:#fff", text:"Needs sign-off"}));
     col.append(tags, h("div", {class:"ttl", title:o.title, text:o.title}));
     if (o.refused){
       const bf = blockingFindings(o);
-      const ref = h("div", {class:"refusal"}, h("div", {class:"big", text:"✕ REFUSED"}));
+      const ref = h("div", {class:"refusal"}, h("div", {class:"big", text:"✕ NOT POSSIBLE"}));
       if (bf.length){
         for (const f of bf){
-          ref.append(h("div", {class:"rule", text:f.message || ""}), h("div", {class:"rid", text:"hard rule: " + f.rule_id}));
+          ref.append(h("div", {class:"rule", text:f.message || ""}), h("div", {class:"rid", text:f.rule_id}));
         }
       } else if (arr(o.refused_by).length){
         ref.append(h("div", {class:"rid", text:"rule: " + arr(o.refused_by).join(", ")}));
       }
       col.append(ref);
       for (const f of bf) if (f.cite) col.append(h("div", {class:"refcite", text:f.cite}));
-      col.append(h("div", {class:"noscore", text:"Not ranked: a hard rule blocks it."}));
+      col.append(h("div", {class:"noscore", text:"Not ranked: it cannot be done."}));
     } else {
       const bars = h("div", {class:"bars"});
       for (const [k, label] of AXES){
@@ -563,7 +564,11 @@ function stepOptions(side){
     row(String(n(o.extra_transports)), n(o.extra_transports) === 1 ? "extra transport" : "extra transports");
     row(String(n(o.shunting_moves)), n(o.shunting_moves) === 1 ? "shunting move" : "shunting moves");
     row(n(o.delay_min) + " min", "delay");
-    row(o.eur == null ? "not priced" : eur(o.eur), "", o.eur == null);
+    row(o.eur == null ? "not priced" : eur(o.eur), "total", o.eur == null);
+    if (o.eur != null && typeof o.eur_table === "number")
+      m.append(h("div", {style:"font-size:13px;color:#866286;line-height:1.25", text:eur(o.eur_table) + " ES cost table + " + eur(o.eur_assumed || 0) + " our assumptions"}));
+    for (const f of arr(o.findings)) if (arr(o.needs_signoff).includes(f.rule_id))
+      col.insertBefore(h("div", {style:"font-size:14px;color:#EA580C;font-weight:600;line-height:1.25;margin:2px 0 4px", text:"Bends the baseline: " + (f.message || f.rule_id)}), col.children[2] || null);
     col.append(m);
     g.append(col);
   }

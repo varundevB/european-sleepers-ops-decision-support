@@ -215,3 +215,10 @@ def test_check_steps_pax_weekend_mattress():
     cs = check_steps([Step("beistellen", car="71 999", train="401", at="DDL")], CTX)
     assert by(cs, "mattress_stays", "warning")
     assert not check_steps([Step("beistellen", car="71 999", train="474", at="ELEN")], CTX)
+
+
+def test_advisory_mode_flags_instead_of_refusing():
+    adv = load_rules(advisory=True)
+    assert adv["approval_country"]["tier"] == "soft" and adv["double_planned"]["tier"] == "hard"
+    f = check_steps([Step("beistellen", car="70 057", train="401", at="DDL")], CTX, rules=adv)
+    assert f and f[0].rule_id == "approval_country" and f[0].status == "warning" and not f[0].blocks

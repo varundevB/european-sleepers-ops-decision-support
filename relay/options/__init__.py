@@ -31,6 +31,8 @@ RESTRICTIVE = {
     "ELEN": "Lengerich: one access track, southbound; efficient only with train 474 (table 6)",
     "SCH": "Schaarbeek: Prague train on Mondays; an exchange with Milan then needs a same-day transport (§2)",
 }
+SIGNOFF = {r["id"] for r in json.loads((REFERENCE / "rules.json").read_text(encoding="utf-8"))["rules"]
+           if r.get("needs_signoff")}
 NOT_CHECKED = "rules not checked: the rule checker (relay.rules) was not available"
 
 
@@ -71,25 +73,34 @@ def _count(opt: Option, network, costs):
     d = costs["detour"]
     detours = sum(s.verb == "detour" for s in opt.steps)
     opt.delay_min = detours * d["delay_min_low"]
-    eur, facts = None, []
+    table, assumed, facts = 0, 0, []
     for i, s in enumerate(opt.steps):
         if s.verb == "extra_transport":
             e, f = _transport_cost(opt.steps, i, network, costs)
-            eur = (eur or 0) + e
+            if "ASSUMPTION" in f:
+                assumed += e
+            else:
+                table += e
             facts.append(f)
         elif s.verb == "detour":
             mid = (d["eur_min"] + d["eur_max"]) // 2
-            eur = (eur or 0) + mid
+            table += mid
             facts.append(f"Detour of train {s.train}: €{mid:,}, the midpoint of €{d['eur_min']:,}–€{d['eur_max']:,} "
-                         f"(ASSUMPTION: midpoint) — {d['cite']}")
-    opt.eur = eur
+                         f"— {d['cite']}")
+    sm = costs["shunting_move"]
+    if opt.shunting_moves and sm.get("eur"):
+        e = opt.shunting_moves * sm["eur"]
+        assumed += e
+        facts.append(f"{opt.shunting_moves} shunting move(s) × €{sm['eur']:,} = €{e:,} — {sm['cite']}")
+    opt.eur_table, opt.eur_assumed, opt.eur = table, assumed, table + assumed
     belgium = sum(s.verb in MOVE_VERBS and s.at in be for s in opt.steps)
     return facts, belgium
 
 
 def _rank_key(o: Option, belgium: int):
-    return (o.extra_transports, o.shunting_moves, belgium, o.delay_min,
-            o.eur if o.eur is not None else float("inf"))
+    # Options that bend no baseline rule come first; within each group the cheapest total wins.
+    return (len(o.needs_signoff), o.eur if o.eur is not None else float("inf"), belgium, o.delay_min,
+            o.extra_transports, o.shunting_moves)
 
 
 # ---------------------------------------------------------------- rules
@@ -98,8 +109,9 @@ def _get_check(check):
     if check is not None:
         return check
     try:
-        from relay.rules import check_steps  # lane B; may not exist yet
-        return check_steps
+        from relay.rules import check_steps, load_rules  # lane B; may not exist yet
+        adv = load_rules(advisory=True)
+        return lambda steps, ctx: check_steps(steps, ctx, rules=adv)
     except Exception:
         return None
 
@@ -120,6 +132,8 @@ def _rules_axis(opt: Option, checked: bool) -> AxisScore:
     blocking = [f for f in opt.findings if f.blocks]
     opt.refused = bool(blocking)
     opt.refused_by = list(dict.fromkeys(f.rule_id for f in blocking))
+    opt.needs_signoff = list(dict.fromkeys(f.rule_id for f in opt.findings
+                                           if f.status == "warning" and f.rule_id in SIGNOFF))
     if not checked and not opt.findings:
         return AxisScore(0, "rules not checked", [f"{NOT_CHECKED} — relay.options"])
     warn = [f for f in opt.findings if f.status == "warning"]
@@ -130,7 +144,8 @@ def _rules_axis(opt: Option, checked: bool) -> AxisScore:
     if blocking:
         return AxisScore(0, f"refused by {', '.join(opt.refused_by)}", facts)
     score = max(10, 100 - 15 * len(warn) - 5 * len(unk))
-    head = f"0 rules broken, {len(warn)} warning(s), {len(unk)} unknown"
+    head = (f"needs sign-off: {', '.join(opt.needs_signoff)}" if opt.needs_signoff
+            else f"clear · {len(warn)} warning(s), {len(unk)} unknown")
     if unk:
         facts.append(f"{len(unk)} rule(s) could not be checked; unknown is not a pass — rules.json")
     if checked and not facts:
@@ -140,7 +155,7 @@ def _rules_axis(opt: Option, checked: bool) -> AxisScore:
 
 # ---------------------------------------------------------------- axes
 
-def _axes(opt, *, checked, money_facts, belgium, product_facts, product_score, pax, costs, line_of):
+def _axes(opt, *, checked, money_facts, belgium, product_facts, product_score, pax, costs, line_of, lost_cars=0):
     a = {"rules": _rules_axis(opt, checked)}
     a["products"] = AxisScore(product_score, product_facts[0][0], [f for _, f in product_facts])
 
@@ -182,23 +197,27 @@ def _axes(opt, *, checked, money_facts, belgium, product_facts, product_score, p
     a["time"] = AxisScore(100 if dm == 0 else 60 if dm <= 60 else 40 if dm <= 120 else 20, f"{dm} min delay", tf)
 
     mf = list(money_facts)
-    eur = opt.eur
+    fare = costs["avg_fare_eur"]["eur"]
     share = costs["refund"]["over_120_min"] if dm > 120 else costs["refund"]["over_60_min"] if dm > 60 else 0
     if share and pax is not None:
-        fare = costs["avg_fare_eur"]["eur"]
         ref = int(pax * fare * share)
-        eur = (eur or 0) + ref
+        opt.eur_assumed += ref
         mf.append(f"Refund estimate {pax} pax × €{fare} × {share:.0%} = €{ref:,}; rests on the €{fare} average-fare "
                   f"ASSUMPTION — {costs['avg_fare_eur']['cite']}")
     elif share:
         mf.append("Refunds due but no passenger count is known, so not estimated — costs.json refund")
-    opt.eur = eur
-    if opt.shunting_moves:
-        mf.append(f"{opt.shunting_moves} shunting move(s) not priced — {costs['shunting_move']['cite']}")
-    if eur is None:
-        a["money"] = AxisScore(50, "cannot be priced", mf or ["Nothing in this option has a price — costs.json"])
-    else:
-        a["money"] = AxisScore(max(0, 100 - eur // 200), f"€{eur:,}", mf)
+    if lost_cars:
+        lc = costs["lost_car"]
+        e = lost_cars * lc["pax"] * fare
+        opt.eur_assumed += e
+        mf.append(f"{lost_cars} car out × {lc['pax']} passengers × €{fare} = €{e:,} worst case — {lc['cite']}")
+    opt.eur = eur = opt.eur_table + opt.eur_assumed
+    mf.insert(0, f"Total €{eur:,} = €{opt.eur_table:,} from ES's cost table + €{opt.eur_assumed:,} on our stated "
+                 "assumptions — costs.json")
+    a["money"] = AxisScore(max(0, 100 - eur // 200), f"€{eur:,}", mf)
+    if opt.proposed and eur == 0:
+        opt.eur = None   # an idea of ours with nothing to price yet: say so rather than show €0
+        a["money"] = AxisScore(50, "not priced yet", ["A proposal: no steps to price until a planner fills it in — relay.options"])
     opt.axes = {k: a[k] for k in AXES}
 
 
@@ -210,7 +229,8 @@ def _finish(opts, extras, *, check, context, network, costs, line_of, pax):
         o.pax_affected = pax
         ok = _apply_rules(o, check, context) if checked_any else False
         _axes(o, checked=ok, money_facts=money, belgium=belgium, product_facts=x["products"],
-              product_score=x["product_score"], pax=pax, costs=costs, line_of=line_of)
+              product_score=x["product_score"], pax=pax, costs=costs, line_of=line_of,
+              lost_cars=0 if o.proposed else x.get("lost_cars", 0))
         x["belgium"] = belgium
     ranked = sorted([o for o in opts if not o.refused and not o.proposed],
                     key=lambda o: _rank_key(o, extras[o.id]["belgium"]))
@@ -357,7 +377,8 @@ def _generic(incident, plan, network, costs, rules, check):
         score = 50 if delivered is None else 100 if delivered else 0
         head = (f"{pname} delivered" if delivered else f"{pname} loses a car" if delivered is False
                 else "product effect UNKNOWN")
-        extras[opt.id] = {"products": [(head, f) for f in pfacts], "product_score": score}
+        extras[opt.id] = {"products": [(head, f) for f in pfacts], "product_score": score,
+                          "lost_cars": 1 if delivered is False else 0}
         opts.append(opt)
 
     busy = {c.car for c in cells if c.kind in ("in_train", "shunt_in", "shunt_out", "transfer", "revision")}

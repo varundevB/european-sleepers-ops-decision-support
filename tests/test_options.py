@@ -75,9 +75,11 @@ def test_friday_reproduces_rulebook_ranking_from_computed_numbers():
 
 def test_friday_euros_come_from_costs_json():
     opts = {o.id: o for o in options_for(FRIDAY["incident"], FRIDAY, check=no_check)}
-    assert opts["sent"].eur is None              # only shunting: no price exists
-    assert opts["rejected_a"].eur == 5000        # §12 Bentheim–Münster–Lengerich
-    assert opts["rejected_b"].eur == 5000 + 5500  # + DDL–SCH, default marked assumption
+    assert opts["sent"].eur_table == 0 and opts["sent"].eur == 12 * 300   # moves only: all assumption
+    assert opts["rejected_a"].eur_table == 5000  # §12 Bentheim–Münster–Lengerich
+    assert opts["rejected_b"].eur_table == 5000 and opts["rejected_b"].eur_assumed == 5500 + 17 * 300
+    for o in opts.values():
+        assert o.eur == o.eur_table + o.eur_assumed
     assert any("ASSUMPTION" in f for f in opts["rejected_b"].axes["money"].facts)
 
 
@@ -116,10 +118,13 @@ def test_no_option_mentions_a_car_outside_scenario_or_plan():
         assert {s.car for s in o.steps if s.car} <= set(plan.cars)
 
 
-def test_eur_is_none_when_nothing_can_be_priced():
+def test_every_option_has_a_total_split_into_table_and_assumption():
     by = {o.id: o for o in options_for(MILAN, plan=fake_plan(), check=fake_check)}
-    assert by["run_short"].eur is None
-    assert by["run_short"].axes["money"].headline == "cannot be priced"
+    r = by["run_short"]
+    assert r.eur_table == 0 and r.eur == r.eur_assumed == 300 + 35 * 100
+    assert any("ASSUMPTION" in f for f in r.axes["money"].facts)
+    assert all(o.eur == o.eur_table + o.eur_assumed for o in by.values() if not o.proposed)
+    assert all(o.eur is None for o in by.values() if o.proposed)   # nothing to price yet: said, not shown as €0
 
 
 def test_milan_detour_refused_prague_detour_priced():
@@ -128,14 +133,14 @@ def test_milan_detour_refused_prague_detour_priced():
     prag = dict(MILAN, line="Prag")
     by = {o.id: o for o in options_for(prag, plan=fake_plan(), check=no_check)}
     d = by["detour"]
-    assert not d.refused and d.delay_min == 120 and d.eur == 2000
+    assert not d.refused and d.delay_min == 120 and d.eur_table == 2000
     assert d.pax_affected is None and not any("Refund estimate" in f for f in d.axes["money"].facts)
 
 
 def test_refund_only_with_known_pax_and_states_assumption():
     prag = dict(MILAN, line="Prag", pax=10)
     d = {o.id: o for o in options_for(prag, plan=fake_plan(), check=no_check)}["detour"]
-    assert d.eur == 2000 + 10 * 100 * 25 // 100
+    assert d.eur_table == 2000 and d.eur_assumed == 300 + 35 * 100 + 10 * 100 * 25 // 100
     assert any("€100 average-fare ASSUMPTION" in f for f in d.axes["money"].facts)
 
 

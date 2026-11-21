@@ -23,9 +23,16 @@ def _json(path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def load_rules(path=REFERENCE / "rules.json", overrides: dict[str, str] | None = None) -> dict:
-    """rule_id -> rule dict. overrides: rule_id -> tier, e.g. {"approval_country": "soft"}."""
+def load_rules(path=REFERENCE / "rules.json", overrides: dict[str, str] | None = None, advisory: bool = False) -> dict:
+    """rule_id -> rule dict. overrides: rule_id -> tier, e.g. {"approval_country": "soft"}.
+
+    advisory=True is how the desk runs: the rulebook is a baseline, so a rule marked needs_signoff does not
+    refuse an option, it flags it for a human sign-off. Only what cannot physically happen stays hard."""
     rules = {r["id"]: dict(r) for r in _json(path)["rules"]}
+    if advisory:
+        for r in rules.values():
+            if r.get("needs_signoff"):
+                r["tier"] = "soft"
     for rid, tier in (overrides or {}).items():
         if rid not in rules:
             raise KeyError(f"unknown rule id in overrides: {rid}")

@@ -33,3 +33,9 @@ Legend: [ ] open · [~] in progress · [x] done and checked by the main agent
 
 ## Phase 6 — Rehearsal
 - [ ] 6.1 Two timed run-throughs, 2:30
+
+## Phase 7 — after the user's review (15:05)
+- [x] 7.1 Every option has a euro total, split "ES cost table" + "our assumptions" (shunting move €300, car out = 35 pax x €100)
+- [x] 7.2 Rulebook as baseline: bending a rule = "Needs sign-off", not a refusal; only the impossible is refused; `--strict` shows the old behaviour
+- [~] 7.3 Independent data check by GPT 6.2 Sol (Codex) — running
+- [ ] 7.4 Shaun's full design system — waiting for the user's upload

@@ -120,7 +120,10 @@ class Option:
     steps: list[Step] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     axes: dict[str, AxisScore] = field(default_factory=dict)   # keys = AXES
-    eur: int | None = None          # total euros; None when it cannot be priced
+    eur: int | None = None          # total euros = eur_table + eur_assumed
+    eur_table: int = 0              # the part priced from ES's own cost table
+    eur_assumed: int = 0            # the part resting on our stated assumptions
+    needs_signoff: list[str] = field(default_factory=list)   # baseline rules this option bends
     shunting_moves: int = 0
     extra_transports: int = 0
     delay_min: int = 0

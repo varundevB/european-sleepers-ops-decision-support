@@ -1,7 +1,10 @@
 """Run one incident through every engine and build the demo page.
 
   uv run python scripts/run_scenario.py friday
-  uv run python scripts/run_scenario.py night Milan 2027-01-12 "91 003" [--relax approval_country]
+  uv run python scripts/run_scenario.py night Milan 2027-01-12 "91 003" [--strict]
+
+By default the rulebook is a baseline: bending it needs a sign-off, it does not refuse the option.
+--strict shows the same night with the rulebook applied as law.
 
 Writes build/<name>.json and build/<name>.html. Every figure comes from the engines or reference/.
 """
@@ -59,8 +62,11 @@ def _validation():
 
 BASE_ASSUMPTIONS = [
     "Average fare €100 = €41m ticket sales / 410,000 passengers (ES briefing slide). The data has no ticket prices.",
-    "A shunting move has no euro price in the rulebook; moves are counted, not priced.",
-    "Which rules are truly hard is not confirmed by ES. Tiers live in reference/rules.json and can be changed.",
+    "A shunting move is priced at €300 — our placeholder; the rulebook gives no price. Change it in reference/costs.json.",
+    "A car taken out is priced as 35 passengers × €100 refunded in full — the worst case, our assumption.",
+    "Every total is split: the part from ES's cost table and the part resting on our assumptions.",
+    "The rulebook is treated as a baseline: bending a rule needs a sign-off, it does not refuse the option. "
+    "Only what cannot physically happen is refused.",
     "Options marked PROPOSAL are ours, not ES policy.",
 ]
 
@@ -107,7 +113,7 @@ def assemble(name, title, subtitle, incident, scenario, plan, rules, network, co
 
 def friday(plan, network, costs):
     sc = _ref("scenarios/friday.json")
-    rules = load_rules()
+    rules = load_rules(advisory=True)
     all_opts = options_for(sc["incident"], sc, plan=plan, network=network, costs=costs)
     findings = [f for o in all_opts if o.id == "sent" for f in o.findings]
     return assemble(
@@ -118,8 +124,8 @@ def friday(plan, network, costs):
          "Extra transport Schaarbeek–Denderleeuw has no listed price; the €5,500 default is an assumption."])
 
 
-def night(plan, network, costs, line, date, car, relax):
-    rules = load_rules(overrides={r: "soft" for r in relax} if relax else None)
+def night(plan, network, costs, line, date, car, strict):
+    rules = load_rules(advisory=not strict)
     meta = plan.cars.get(car)
     if meta is None:
         raise SystemExit(f"car {car!r} is not in the plan")
@@ -135,14 +141,14 @@ def night(plan, network, costs, line, date, car, relax):
                 "cite": f"{cell.src.file} · {cell.src.sheet}!{cell.src.cell}"}
     scenario = {"id": incident["id"], "title": f"{line} train, {date}", "date": date, "trains": {}, "cars": []}
     cars = [{"car": car, "owner": meta.owner, "type": meta.type, "start": incident["place"], "note": "broken"}]
-    name = f"night_{line.lower()}_{date}" + ("_relaxed" if relax else "")
+    name = f"night_{line.lower()}_{date}" + ("_strict" if strict else "")
     sub = f"A real night from the plan · {cell.src.sheet}!{cell.src.cell}"
-    if relax:
-        sub = "WHAT IF · " + ", ".join(relax) + " soft · not ES policy"
+    if strict:
+        sub = "WHAT IF · the rulebook applied as law"
     return assemble(name, f"Relay · {line} train, {date}", sub, incident, scenario, plan, rules, network, costs,
                     cars, check_day(plan, date, rules=rules, network=network, costs=costs),
                     ["Reserve candidates come from the plan grid; whether a car is physically fit is not in the data."]
-                    + ([f"WHAT IF: rule {r} is treated as soft here. This is not ES policy." for r in relax]))
+                    + (["WHAT IF: every baseline rule is applied as a hard refusal on this page."] if strict else []))
 
 
 def main(argv):
@@ -151,8 +157,7 @@ def main(argv):
     if argv[:1] == ["friday"]:
         friday(plan, network, costs)
     elif argv[:1] == ["night"] and len(argv) >= 4:
-        relax = argv[argv.index("--relax") + 1:] if "--relax" in argv else []
-        night(plan, network, costs, argv[1], argv[2], argv[3], relax)
+        night(plan, network, costs, argv[1], argv[2], argv[3], "--strict" in argv)
     else:
         print(__doc__)
         return 2
