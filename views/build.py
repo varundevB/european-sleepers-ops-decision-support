@@ -17,7 +17,7 @@ OPTIONAL = {"subtitle": "", "generated_at": "", "findings": [], "validation": No
 
 
 class ScenarioError(ValueError):
-    """The scenario JSON does not have the shape in CONTRACTS.md, Lane E."""
+    """The scenario JSON does not have the shape in docs/CONTRACTS.md, Lane E."""
 
 
 def _need(obj: dict, keys, where: str) -> None:
