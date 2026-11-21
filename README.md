@@ -172,3 +172,11 @@ Useful next work:
 ## Ownership and use
 
 This repository contains application code, not a licence to redistribute European Sleeper's operational material. Follow the hackathon's data, confidentiality, ownership, and submission agreements. No open-source licence is implied by publishing the code.
+
+## Relay: the disruption console (`relay/`)
+
+The `relay/` folder holds a second, self-contained part of this submission: a single-screen console
+that replays a real incident (Milan line, 5 October 2026) and the rulebook's Friday case, scores each
+possible action on six checks, and seals the planner's decision. It has its own README, tests and
+notes on what is estimated: see [relay/README.md](relay/README.md) and
+[relay/SUBMISSION.md](relay/SUBMISSION.md).
