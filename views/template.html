@@ -199,7 +199,7 @@ pre{margin:0;padding:10px;font:13px/1.45 var(--mono);white-space:pre-wrap;overfl
 const D = JSON.parse(document.getElementById("data").textContent);
 const NS = "http://www.w3.org/2000/svg";
 const AXES = [["rules","Rules"],["products","Products"],["partners","Partners"],["infrastructure","Infrastructure"],["time","Time"],["money","Money"]];
-const FLOW = [["Receive","sec-receive"],["Who is affected","sec-affected"],["Actions and checks","sec-actions"],["Decide and coordinate","sec-decide"],["Proof","sec-proof"]];
+const FLOW = [["Incident","sec-receive"],["Impact","sec-affected"],["Options","sec-actions"],["Decision","sec-decide"],["Record","sec-proof"]];
 const NET = D.network || {places:{},lines:{}}, PL = NET.places || {}, LINES = NET.lines || {};
 const LIVE = D.live || null, INC = D.incident || {};
 const LABELS = {BRU:{dx:8,dy:16,a:"start"}, DDL:{dx:-8,dy:-7,a:"end"}, HBTH:{dx:-8,dy:-8,a:"end"}, ELEN:{dx:9,dy:-7,a:"start"},
@@ -233,6 +233,11 @@ const pad = n => String(n).padStart(2, "0");
 /* A fact reads "statement — source". Split at the last dash. */
 function splitFact(f){ const i = String(f).lastIndexOf(" — "); return i < 0 ? [String(f), ""] : [f.slice(0, i), f.slice(i + 3)]; }
 function panel(title, right, ...kids){ return h("section", {class:"panel"}, h("header", {}, h("h2", {text:title}), right), kids); }
+function tidy(t){ return String(t || "").replace(/(\d+) ([\w ]+?)\(s\)/g, (m, n, w) => n + " " + w + (n === "1" ? "" : "s")).replace(/^In train, not commercial loses a car$/, "1 car out of the train").replace(/ loses a car$/, " · 1 car lost").replace(/\b1 (shunting moves|moves|transports)\b/g, (m, w) => "1 " + w.slice(0, -1)).replace(/^clear · /, ""); }
+const SHORT = {run_short:c => "Run short · remove " + c, workshop_transport:c => "Run short · " + c + " to workshop by transport", p_lend:() => "Borrow a car from the Paris train",
+  p_preposition:() => "Pre-position a reserve car at Denderleeuw", detour:c => "Detour via workshop · drop " + c};
+function ttl(o){ return o ? (SHORT[o.id] && INC.car ? SHORT[o.id](INC.car) : String(o.title || "").replace(/^PROPOSAL:\s*/, "")) : ""; }
+function split(o){ return o.eur == null ? "" : o.eur_assumed ? "ES rates " + eur(o.eur_table) + " · est. " + eur(o.eur_assumed) : "ES rates " + eur(o.eur_table); }
 function more(label, hash){ return h("button", {class:"more", text:label + " →", onclick:() => { location.hash = hash; }}); }
 
 /* ---------- scenario clock ---------- */
@@ -286,8 +291,7 @@ function seedLog(){
     if (back) addLog(back.last.real_arr.slice(0, 5).padStart(5, "0"), "INFRABEL", "Train " + NET.lines[LIVE.line].return + " reaches " + back.last.name +
       ", planned " + back.last.plan_arr.slice(0, 5) + " (+" + mins(back.last.delay_arr_s) + " min)", false);
   }
-  addLog(LIVE ? fmtHM(sim) : "—", "PLAN", INC.cite || "", false);
-  addLog(LIVE ? fmtHM(sim) : "—", "CASE", "Case opened: " + String(INC.kind || "").replace(/_/g, " ") + ", car " + (INC.car || "") + ". Planner: " + (D.user || "—"));
+  addLog(LIVE ? fmtHM(sim) : "—", "CASE", "Car " + (INC.car || "") + " · " + String(INC.kind || "").replace(/_/g, " ") + " · " + (INC.cite || "").split(" · ").pop());
 }
 
 /* ---------- map ---------- */
@@ -351,12 +355,12 @@ function drawMap(){
 function verdict(opt, key){
   const ax = (opt.axes || {})[key] || {}, hd = String(ax.headline || "");
   if (key === "rules"){
-    if (opt.refused) return ["v-no", "✕ NOT POSSIBLE"];
-    if (arr(opt.needs_signoff).length) return ["v-ca", "■ NEEDS SIGN-OFF"];
+    if (opt.refused) return ["v-no", "✕ BLOCKED"];
+    if (arr(opt.needs_signoff).length) return ["v-ca", "■ SIGN-OFF"];
   }
-  if (/UNKNOWN|not priced/.test(hd)) return ["v-na", "? NO ANSWER"];
-  if (ax.score == null) return ["v-na", "? NO ANSWER"];
-  return ax.score >= 80 ? ["v-go", "✓ CLEAR"] : ax.score >= 50 ? ["v-ca", "■ TRADE-OFF"] : ["v-no", "▲ HEAVY"];
+  if (/UNKNOWN|not priced/.test(hd)) return ["v-na", "? NO DATA"];
+  if (ax.score == null) return ["v-na", "? NO DATA"];
+  return ax.score >= 80 ? ["v-go", "✓ OK"] : ax.score >= 50 ? ["v-ca", "■ CAUTION"] : ["v-no", "▲ IMPACT"];
 }
 function renderBoard(){
   const el = document.getElementById("board"); if (!el) return;
@@ -364,15 +368,15 @@ function renderBoard(){
   const cells = AXES.map(([k, name]) => {
     const ax = (opt.axes || {})[k] || {}, [cls, word] = verdict(opt, k), [txt, src] = splitFact(arr(ax.facts)[0] || "");
     count[word] = (count[word] || 0) + 1;
-    return h("button", {class:"cell", title:"Open every fact behind this check", onclick:() => { location.hash = "action/" + opt.id; }},
+    return h("button", {class:"cell", onclick:() => { location.hash = "action/" + opt.id; }},
       h("span", {class:"net", text:name}), h("span", {class:"verdict " + cls, text:word}),
-      h("span", {class:"note", text:ax.headline || txt}), h("span", {class:"evl", text:"SRC " + (src || "—")}));
+      h("span", {class:"note", text:tidy(ax.headline || txt)}), h("span", {class:"evl", text:"SRC " + (src || "—")}));
   });
   const tally = Object.entries(count).map(([k, n]) => n + " " + k.replace(/^\S+\s/, "")).join(" · ");
   el.replaceChildren(h("div", {class:"board"}, cells),
     h("div", {class:"tally"}, h("span", {text:tally}),
-      h("span", {class:"callout" + (S.recorded ? " done" : ""), text:S.recorded ? "PLANNER'S CALL: RECORDED" : "PLANNER'S CALL: AWAITING"})));
-  document.getElementById("board-ttl").textContent = "Six checks · " + opt.title;
+      h("span", {class:"callout" + (S.recorded ? " done" : ""), text:S.recorded ? "DECISION RECORDED" : "DECISION PENDING"})));
+  document.getElementById("board-ttl").textContent = "Checks · " + ttl(opt);
 }
 
 /* ---------- planner's call ---------- */
@@ -382,40 +386,39 @@ function renderCall(){
   const rows = optOrder().map(o => {
     const off = o.refused || o.proposed, dis = off || !!S.recorded;
     const tags = [o.id === D.chosen ? h("span", {class:"tagb g", text:"RANK 1"}) : null,
-      o.refused ? h("span", {class:"tagb w", text:"NOT POSSIBLE"}) : null,
-      o.proposed ? h("span", {class:"tagb x", text:"PROPOSAL · OURS"}) : null,
+      o.refused ? h("span", {class:"tagb w", text:"BLOCKED"}) : null,
+      o.proposed ? h("span", {class:"tagb x", text:"PROPOSAL"}) : null,
       arr(o.needs_signoff).length ? h("span", {class:"tagb c", text:"NEEDS SIGN-OFF " + o.needs_signoff.length}) : null];
     return h("label", {class:"opt-r" + (o.id === S.sel ? " sel" : "") + (off ? " off" : "")},
       h("input", {type:"radio", name:"opt", value:o.id, checked:o.id === S.sel, disabled:dis && o.id !== S.sel, onchange:() => select(o.id)}),
-      h("span", {class:"ttl", text:o.title.replace(/^PROPOSAL:\s*/, "")}),
-      h("span", {class:"eur", text:eur(o.eur)}),
-      h("span", {class:"meta"}, tags, o.eur != null ? h("span", {text:eur(o.eur_table) + " ES table + " + eur(o.eur_assumed) + " assumed"}) : null,
-        off ? null : h("span", {text:(o.shunting_moves || 0) + " moves · +" + (o.delay_min || 0) + " min"}), more("More info", "action/" + o.id)));
+      h("span", {class:"ttl", text:ttl(o)}),
+      h("span", {class:"eur", text:o.eur == null ? "—" : eur(o.eur)}),
+      h("span", {class:"meta"}, tags, o.eur != null ? h("span", {text:split(o)}) : h("span", {text:"not priced"}),
+        off ? null : h("span", {text:tidy((o.shunting_moves || 0) + " moves") + " · +" + (o.delay_min || 0) + " min"}), more("Detail", "action/" + o.id)));
   });
   const kids = [h("div", {}, rows)];
   if (S.recorded){
     const r = S.recorded, docs = ((D.documents.by_option || {})[r.option]) || {};
     kids.push(h("div", {class:"rec"}, h("div", {class:"stamp", text:"✓ RECORDED"}),
-      h("dl", {}, h("dt", {text:"Action"}), h("dd", {text:optById(r.option).title}), h("dt", {text:"By"}), h("dd", {text:r.user}),
+      h("dl", {}, h("dt", {text:"Action"}), h("dd", {text:ttl(optById(r.option))}), h("dt", {text:"By"}), h("dd", {text:r.user}),
         h("dt", {text:"Why"}), h("dd", {text:r.reason || "no reason given"}), h("dt", {text:"At"}), h("dd", {class:"mono", text:r.at}),
         h("dt", {text:"Seal"}), h("dd", {class:"mono", text:r.seal}))));
-    kids.push(h("div", {class:"sent"}, h("div", {class:"lab", text:"Coordinate execution"}),
-      docs.error ? h("div", {class:"norule", text:"NO DOCUMENT DRAFTED · " + docs.error}) : [
+    kids.push(h("div", {class:"sent"}, h("div", {class:"lab", text:"Messages"}),
+      docs.error ? h("div", {class:"norule", text:"NO DRAFT · " + docs.error}) : [
         h("div", {class:"m"}, h("span", {}, h("b", {text:"Task order (German)"}), " · " + String(docs.task_order_de || "").split("\n").filter(x => x.startsWith("- ")).length + " lines"), more("Open", "documents")),
         arr(docs.messages).map(m => h("div", {class:"m"}, h("span", {}, h("b", {text:m.to}), " · " + m.subject), confTag(m.to, true))),
         arr(docs.messages).length ? h("div", {class:"outst", text:outstanding(docs)}) : null],
-      h("div", {class:"hint", style:"padding:6px 0 0", text:"A correction is added after this entry, never written over it."}),
       h("div", {style:"display:flex;gap:8px;margin-top:6px"},
-        LIVE && !S.replay ? h("button", {class:"arm", id:"replaybtn", text:"▶ REPLAY THE NIGHT", onclick:startReplay}) : null,
-        h("button", {class:"ghost", text:"REOPEN / CORRECT", onclick:reopen}))));
+        LIVE && !S.replay ? h("button", {class:"arm", id:"replaybtn", text:"▶ RUN REPLAY", onclick:startReplay}) : null,
+        h("button", {class:"ghost", text:"REOPEN", onclick:reopen}))));
   } else {
-    kids.push(h("div", {class:"why"}, h("div", {class:"lab", text:"Reason (the planner's words)"}),
-      h("textarea", {id:"why", placeholder:"Why this action?"}),
-      h("div", {class:"quick"}, ["Lowest cost, no rule bent", "Fewest moves in the yards"].map(t =>
+    kids.push(h("div", {class:"why"}, h("div", {class:"lab", text:"Reason"}),
+      h("textarea", {id:"why", placeholder:"Reason for decision"}),
+      h("div", {class:"quick"}, ["Lowest cost", "Fewest moves", "Least passenger impact"].map(t =>
         h("button", {text:t, onclick:() => { document.getElementById("why").value = t; }})))));
-    kids.push(h("div", {class:"armrow"}, h("button", {class:"arm", id:"armbtn", text:"ARM CALL", onclick:arm}),
+    kids.push(h("div", {class:"armrow"}, h("button", {class:"arm", id:"armbtn", text:"RECORD DECISION", onclick:arm}),
       h("button", {class:"ghost", id:"disarm", text:"CANCEL", style:"display:none", onclick:disarm})));
-    kids.push(h("div", {class:"hint", text:"Arm, then confirm within 10 s. The tool proposes; the planner decides."}));
+    kids.push(h("div", {class:"hint", text:"Confirm within 10 s."}));
   }
   el.replaceChildren(...kids);
 }
@@ -424,11 +427,11 @@ function arm(){
   const b = document.getElementById("armbtn");
   if (S.armed){ confirmCall(); return; }
   S.armed = 10; b.classList.add("armed"); document.getElementById("disarm").style.display = "";
-  const tick = () => { if (!S.armed) return; b.textContent = "CONFIRM · " + S.armed + " s"; if (--S.armed < 0){ disarm(); addLog(nowLabel(), "CALL", "Armed call timed out; nothing recorded."); } };
+  const tick = () => { if (!S.armed) return; b.textContent = "CONFIRM · " + S.armed + " s"; if (--S.armed < 0){ disarm(); addLog(nowLabel(), "CALL", "Not confirmed within 10 s. Nothing recorded."); } };
   tick(); S.armTimer = setInterval(tick, 1000);
 }
 function disarm(){ clearInterval(S.armTimer); S.armed = 0; const b = document.getElementById("armbtn");
-  if (b){ b.classList.remove("armed"); b.textContent = "ARM CALL"; const d = document.getElementById("disarm"); if (d) d.style.display = "none"; } }
+  if (b){ b.classList.remove("armed"); b.textContent = "RECORD DECISION"; const d = document.getElementById("disarm"); if (d) d.style.display = "none"; } }
 function nowLabel(){ return LIVE ? fmtHM(sim) : new Date().toTimeString().slice(0, 5); }
 async function seal(rec){
   const prev = (D.documents.audit || {}).hash || "";
@@ -440,30 +443,30 @@ async function seal(rec){
 async function confirmCall(){
   clearInterval(S.armTimer); S.armed = 0;
   const reason = (document.getElementById("why") || {}).value || "";
-  const rec = {incident:INC.id, option:S.sel, reason, user:D.user || "planner", at:LIVE ? LIVE.date + " " + fmtT(sim) + " (replay clock)" : new Date().toISOString().slice(0, 19).replace("T", " ")};
+  const rec = {incident:INC.id, option:S.sel, reason, user:D.user || "planner", at:LIVE ? LIVE.date + " " + fmtT(sim) + "" : new Date().toISOString().slice(0, 19).replace("T", " ")};
   rec.seal = await seal(rec); S.recorded = rec;
   const left = LIVE ? Math.round((PLAN_DEP - sim) / 60e3) : null;
-  addLog(nowLabel(), "DECISION", optById(S.sel).title + (left != null ? (left >= 0 ? " — " + left + " min before planned departure" : " — " + (-left) + " min after planned departure") : ""));
-  addLog(nowLabel(), "DRAFTED", "Task order and " + arr(((D.documents.by_option || {})[S.sel] || {}).messages).length + " partner messages drafted. No confirmation recorded yet.");
+  addLog(nowLabel(), "DECISION", ttl(optById(S.sel)) + (left != null ? (left >= 0 ? " · T-" + left + " min" : " · T+" + (-left) + " min") : ""));
+  addLog(nowLabel(), "DRAFTED", "Task order + " + arr(((D.documents.by_option || {})[S.sel] || {}).messages).length + " messages drafted · 0 confirmed");
   setFlow(3, true); renderCall(); renderBoard(); renderFoot();
 }
 function confTag(to, withBtn){
   const c = S.conf[to];
-  if (c) return h("span", {class:"tagb g", text:"✓ CONFIRMED " + c.at + " · ENTERED BY HAND"});
-  return h("span", {class:"confcell"}, h("span", {class:"tagb x", text:"DRAFTED · UNCONFIRMED"}),
+  if (c) return h("span", {class:"tagb g", text:"✓ CONFIRMED " + c.at + " · MANUAL"});
+  return h("span", {class:"confcell"}, h("span", {class:"tagb x", text:"DRAFT"}),
     withBtn ? h("button", {class:"mini", text:"MARK CONFIRMED", onclick:() => markConfirmed(to)}) : null);
 }
 function outstanding(docs){
   const all = arr(docs.messages).map(m => m.to), open = all.filter(t => !S.conf[t]);
-  return (all.length - open.length) + " of " + all.length + " confirmed · " + (open.length ? "still open: " + open.join(", ") : "nothing outstanding") + ". The planner enters a confirmation by hand; this tool does not send or receive messages.";
+  return (all.length - open.length) + "/" + all.length + " confirmed" + (open.length ? " · open: " + open.join(", ") : "");
 }
 function markConfirmed(to){
   if (!S.recorded || S.conf[to]) return;
   S.conf[to] = {at:nowLabel(), by:S.recorded.user};
-  addLog(nowLabel(), "CONFIRMED", to + " — confirmation entered by hand by " + S.recorded.user + ".");
+  addLog(nowLabel(), "CONFIRMED", to + " confirmed · manual entry · " + S.recorded.user);
   renderCall(); if (location.hash) route();
 }
-function reopen(){ addLog(nowLabel(), "REOPEN", "Decision reopened. The earlier entry stays in the log." + (Object.keys(S.conf).length ? " Confirmations entered for it no longer count." : "")); S.conf = {}; S.recorded = null; renderCall(); renderBoard(); renderFoot(); }
+function reopen(){ addLog(nowLabel(), "REOPEN", "Decision reopened" + (Object.keys(S.conf).length ? " · confirmations cleared" : "")); S.conf = {}; S.recorded = null; renderCall(); renderBoard(); renderFoot(); }
 
 function renderRules(){
   const el = document.getElementById("rules"); if (!el) return;
@@ -474,12 +477,12 @@ function renderRules(){
       h("div", {text:f.message}), h("q", {text:f.cite || ""})));
   }
   for (const r of arr(opt.needs_signoff)) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:typeof r === "string" ? r : (r.rule_id || JSON.stringify(r))}),
-    h("span", {class:"tagb c", text:"NEEDS SIGN-OFF"}), h("div", {text:typeof r === "string" ? "Bends the baseline; a named person must sign it off." : (r.message || "")})));
-  for (const r of arr(opt.refused_by)) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:r}), h("span", {class:"tagb w", text:"NOT POSSIBLE"})));
-  if (!out.length) out.push(h("div", {class:"norule", text:"NO RULE FLAGGED FOR THESE STEPS · rules.json via check_steps"}));
+    h("span", {class:"tagb c", text:"NEEDS SIGN-OFF"}), h("div", {text:typeof r === "string" ? "Sign-off required." : (r.message || "")})));
+  for (const r of arr(opt.refused_by)) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:r}), h("span", {class:"tagb w", text:"BLOCKED"})));
+  if (!out.length) out.push(h("div", {class:"norule", text:"NO RULE FLAGGED"}));
   const day = arr(D.findings), n = k => day.filter(f => f.status === k).length;
-  if (day.length) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:"SAME DAY, WHOLE PLAN"}),
-    h("div", {text:n("violation") + " violations · " + n("warning") + " warnings · " + n("unknown") + " unknown (not counted as ok)"}), more("See all", "scan")));
+  if (day.length) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:"PLAN · SAME DAY"}),
+    h("div", {text:n("violation") + " violations · " + n("warning") + " warnings · " + n("unknown") + " unknown"}), more("All", "scan")));
   el.replaceChildren(...out);
 }
 
@@ -494,15 +497,14 @@ function startReplay(){
     if (t > sim) ev.push([t, "INFRABEL", "Train " + no + " leaves " + f.first.name + ", planned " + f.first.plan_dep.slice(0, 5) + " (+" + mins(f.first.delay_dep_s) + " min)", false]); }
   queue = ev.sort((a,b) => a[0] - b[0]);
   rate = (queue.at(-1)[0] + 60e3 - sim) / 24000;   /* the whole evening in about 24 seconds */
-  addLog(fmtHM(sim), "REPLAY", "Replaying the recorded night from Infrabel open data.");
+  addLog(fmtHM(sim), "REPLAY", "Replay started · Infrabel recorded times");
 }
 function endReplay(){
   rate = 0; queue = [];
   const row = arr(LIVE.ops).find(o => o.line === LIVE.line && o.date === LIVE.date);
   if (row) addLog("LOG", "ES LOG", "“" + row.note + "” Departure +" + row.dep_delay + " min, arrival +" + row.arr_delay + " min, " + (row.pax ?? "?") + " passengers, " +
     (row.downgrades ?? 0) + " downgrades (" + row.cite.split(" · ")[1] + ")");
-  addLog("PLAN", "ACTUAL", "What the plan shows for that night: " + (INC.note || "").split("The plan has it")[1].replace(/^[^:]*:\s*/, "").replace(/\.$/, "") +
-    " — the car stayed in the train, unsold. Our generator does not yet propose that action.");
+  addLog("PLAN", "ACTUAL", (INC.note || "").split("The plan has it")[1].replace(/^[^:]*:\s*/, "").replace(/\.$/, "") + " · car ran in train, not sold");
   setFlow(4, true);
 }
 function tick(){
@@ -527,17 +529,17 @@ function renderFleet(){
   for (const [lk, L] of Object.entries(LINES)) for (const [no, dir] of [[L.outbound, "out"], [L.return, "back"]]){
     if (!no) continue;
     const route = dir === "out" ? L.name : L.name.split(" – ").reverse().join(" – ");
-    let cls = "n", st = "● NOT IN CASCADE", tm = "";
+    let cls = "n", st = "● NOT AFFECTED", tm = "";
     if (aff.has(no)){ cls = "w"; st = "▲ AFFECTED"; }
     else if (mine.has(lk)){ cls = "c"; st = "■ SAME LINE"; }
-    else if (touched.has(lk)){ cls = "c"; st = "■ SHARES A YARD"; }
+    else if (touched.has(lk)){ cls = "c"; st = "■ SAME YARD"; }
     let tmEl = null;
     if (LIVE){ const f = LIVE.fleet[no];
-      if (!f){ tm = "no Infrabel rows this day"; if (cls === "n"){ cls = "a"; st = "ⓘ NO DATA"; } }
+      if (!f){ tm = "no running data"; if (cls === "n"){ cls = "a"; st = "ⓘ NO DATA"; } }
       else if (f.first.plan_dep && f.first.name.startsWith("Brussel")){ const t = tms(f.first.plan_dep), r = tms(f.first.real_dep, t);
         if (sim >= r){ tm = "left " + f.first.real_dep.slice(0, 5) + " · +" + mins(f.first.delay_dep_s) + " min"; }
         else tmEl = h("div", {class:"tm"}, "dep " + f.first.plan_dep.slice(0, 5) + " · ", h("span", {"data-t":t})); }
-      else { tm = "arr " + f.last.real_arr.slice(0, 5) + " · +" + mins(f.last.delay_arr_s) + " min"; if (mins(f.last.delay_arr_s) > 60 && cls !== "w"){ cls = "c"; st = "■ ARRIVED LATE"; } }
+      else { tm = "arr " + f.last.real_arr.slice(0, 5) + " · +" + mins(f.last.delay_arr_s) + " min"; if (cls !== "w"){ if (mins(f.last.delay_arr_s) > 60){ cls = "c"; st = "■ ARRIVED LATE"; } else { cls = "n"; st = "● ARRIVED"; } } }
     }
     cards.push(h("div", {class:"fc " + cls}, h("div", {class:"top"}, h("span", {class:"no", text:no}), h("span", {class:"st " + cls, text:st})),
       h("div", {class:"rt", text:route}), tmEl || h("div", {class:"tm", text:tm || (LIVE ? "" : "no time on file")})));
@@ -548,11 +550,10 @@ function renderFleet(){
 function renderFoot(){
   const el = document.getElementById("foot"); if (!el) return;
   const a = D.documents.audit || {}, v = D.validation;
+  const m = v && /^(\d+) conflicts/.exec(v.headline || "");
   el.replaceChildren(
-    h("span", {}, h("span", {class:"ok", text:"✓ AUDIT CHAIN INTACT"}), " · last entry sha256 " + String(a.hash || "").slice(0, 16) + "… · ",
-      h("button", {text:"VERIFY", onclick:e => { e.target.textContent = "CHECKED AT BUILD · " + String(a.at || "").slice(11, 19); }})),
-    h("span", {text:v ? v.headline : ""}), more("Whole-plan scan and proof", "scan"),
-    h("span", {class:"muted", text:"A hash chain proves order and integrity, not truth. Runs offline, no model calls."}));
+    h("span", {}, h("span", {class:"ok", text:"✓ DECISION LOG"}), " · sha256 " + String(a.hash || "").slice(0, 16) + "…"),
+    h("span", {text:m ? "PLAN SCAN · " + m[1] + " CONFLICTS AHEAD" : (v ? v.headline : "")}), more("Plan scan", "scan"));
 }
 
 /* ---------- workflow strip ---------- */
@@ -574,15 +575,15 @@ function build(){
   app.replaceChildren(
     h("div", {class:"hdr"},
       h("div", {class:"brand"}, h("b", {text:"European Sleeper · Operations Decision Support"}),
-        h("span", {text:(D.title || "").replace(/^Relay · /, "") + " · " + (D.subtitle || "")})),
+        h("span", {text:(LIVE ? "Train " + LIVE.train + " · " : "") + lineNames + (INC.date ? " · " + INC.date : "")})),
       h("div", {class:"clock"}, h("div", {class:"t", id:"clock", text:LIVE ? fmtT(sim) : "— : —"}),
-        h("div", {class:"d", text:LIVE ? LIVE.date + " · local time, Brussels" : "no time on file · rulebook §11 gives none"})),
+        h("div", {class:"d", text:LIVE ? LIVE.date + " · BRUSSELS" : "NO TIME ON FILE"})),
       h("div", {class:"next", id:"next"}, h("div", {class:"k", id:"nextk", text:"DECIDE BY"}), h("div", {class:"v", id:"nextv", text:"NOT ON FILE"}))),
-    h("div", {class:"replay"}, h("span", {text:LIVE ? LIVE.label : "CASE FROM THE RULEBOOK · no running data · not a live feed"}),
-      h("span", {text:"← → step through · Esc closes a detail page"})),
+    h("div", {class:"replay"}, h("span", {text:LIVE ? "REPLAY " + LIVE.date + " · NOT LIVE" : "RULEBOOK CASE §11 · NOT LIVE"}),
+      h("span", {text:LIVE ? "SRC ES PLAN · ES OPS LOG · INFRABEL (CC0)" : "SRC ES RULEBOOK · ES PLAN"})),
     h("div", {class:"master sec-receive", id:"master"}, h("span", {class:"tier", text:"▲ WARNING 1"}),
-      h("span", {class:"msg", text:INC.note || ""}), h("span", {class:"src", text:"SRC " + (INC.cite || "—")}),
-      h("button", {text:"ACK", onclick:e => { S.acked = true; document.getElementById("master").classList.add("acked"); e.target.textContent = "ACKED " + nowLabel(); e.target.disabled = true; addLog(nowLabel(), "ACK", "Incident acknowledged by " + (D.user || "planner") + "."); }}),
+      h("span", {class:"msg", text:String(INC.note || "").split(". ")[0].replace(/\.$/, "")}), h("span", {class:"src", text:"SRC " + (INC.cite || "—")}),
+      h("button", {text:"ACK", onclick:e => { S.acked = true; document.getElementById("master").classList.add("acked"); e.target.textContent = "ACKED " + nowLabel(); e.target.disabled = true; addLog(nowLabel(), "ACK", "Acknowledged · " + (D.user || "planner")); }}),
       more("Case file", "case")),
     h("div", {class:"flow"}, FLOW.map(([name], i) => h("button", {onclick:() => setFlow(i)}, h("b", {text:String(i + 1)}), name))),
     h("div", {class:"fleet sec-affected", id:"fleet"}),
@@ -591,25 +592,25 @@ function build(){
         h("section", {class:"panel sec-affected trow"},
           h("div", {class:"train"}, h("div", {class:"no", style:trainNo.length > 4 ? "font-size:34px" : null, text:trainNo}),
             h("div", {}, h("div", {class:"rt", text:lineNames + " · car " + (INC.car || "—")}),
-              h("div", {class:"sub", text:String(INC.kind || "").replace(/_/g, " ").toUpperCase() + " · " + (INC.place ? shortName(INC.place) : "place not in the plan cell") })) ),
+              h("div", {class:"sub", text:String(INC.kind || "").replace(/_/g, " ").toUpperCase() + " · " + (INC.place ? shortName(INC.place) : "LOCATION UNKNOWN") })) ),
           h("div", {class:"tele"},
-            row ? h("div", {class:"crit"}, h("div", {class:"lab", text:"Passengers on this train"}), h("div", {class:"v", text:String(row.pax ?? "—")}), h("div", {class:"s", text:row.cite.split(" · ")[1].replace("B", "E")}))
+            row ? h("div", {class:"crit"}, h("div", {class:"lab", text:"Passengers"}), h("div", {class:"v", text:String(row.pax ?? "—")}), h("div", {class:"s", text:row.cite.split(" · ")[1].replace("B", "E")}))
                 : h("div", {class:"crit"}, h("div", {class:"lab", text:"Cars in play"}), h("div", {class:"v", text:String(arr(D.cars).length)}), h("div", {class:"s", text:INC.cite || ""})),
-            h("div", {}, h("div", {class:"lab", text:"Cheapest action, no sign-off"}), h("div", {class:"v", text:clean ? eur(clean.eur) : "—"}), h("div", {class:"s", text:clean ? eur(clean.eur_table) + " ES table + " + eur(clean.eur_assumed) + " assumed" : "none"})),
-            h("div", {}, h("div", {class:"lab", text:"Candidate actions"}), h("div", {class:"v", text:String(arr(D.options).length)}), h("div", {class:"s", text:nSign + " need sign-off · " + nRef + " not possible · " + arr(D.options).filter(o => o.proposed).length + " proposals"})))),
+            h("div", {}, h("div", {class:"lab", text:"Lowest cost"}), h("div", {class:"v", text:clean ? eur(clean.eur) : "—"}), h("div", {class:"s", text:clean ? split(clean) : "none"})),
+            h("div", {}, h("div", {class:"lab", text:"Options"}), h("div", {class:"v", text:String(arr(D.options).length)}), h("div", {class:"s", text:ranked.length + " feasible · " + nRef + " blocked · " + arr(D.options).filter(o => o.proposed).length + " not priced" + (nSign ? " · " + nSign + " sign-off" : "")})))),
         h("div", {class:"two"},
-          h("section", {class:"panel sec-affected"}, h("header", {}, h("h2", {text:"Network · cascade · car moves"}), more("Case file", "case")),
+          h("section", {class:"panel sec-affected"}, h("header", {}, h("h2", {text:"Network"}), more("Case file", "case")),
             s("svg", {id:"map", role:"img", "aria-label":"Network map with the cascade and the car moves of the selected action"}),
-            h("div", {class:"legend"}, h("span", {}, h("i", {}), "affected line"), h("span", {}, h("i", {style:"border-top:3px dashed #4A3A45"}), "line sharing a yard"),
-              h("span", {}, h("i", {style:"border-top:4px solid #F2A900"}), "reached by the cascade"), h("span", {}, h("i", {style:"border-top:3px dashed #15803D"}), "selected action"),
-              h("span", {text:(INC.place ? "▲ incident" : "▲ first step of the ranked action (the plan cell gives no place)") + " · □ workshop"}))),
-          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {id:"board-ttl", text:"Six checks"}), h("span", {class:"lab muted", text:"click a check for its facts"})),
+            h("div", {class:"legend"}, h("span", {}, h("i", {}), "affected line"), h("span", {}, h("i", {style:"border-top:3px dashed #4A3A45"}), "same yard"),
+              h("span", {}, h("i", {style:"border-top:4px solid #F2A900"}), "knock-on"), h("span", {}, h("i", {style:"border-top:3px dashed #15803D"}), "car move"),
+              h("span", {text:(INC.place ? "▲ incident" : "▲ first move · car location unknown") + " · □ workshop"}))),
+          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {id:"board-ttl", text:"Checks"})),
             h("div", {id:"board"}))),
         h("div", {class:"two"},
-          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {text:"Rules on this action"})), h("div", {id:"rules"})),
+          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {text:"Rules"})), h("div", {id:"rules"})),
           h("section", {class:"panel sec-receive"}, h("header", {}, h("h2", {text:"Event log"}), h("span", {class:"lab muted", text:LIVE ? "replay" : "this session"})), h("div", {class:"log", id:"log"})))),
       h("div", {class:"col"},
-        h("section", {class:"panel sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Planner's call"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})))),
+        h("section", {class:"panel sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Decision"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})))),
     h("div", {class:"foot sec-proof", id:"foot"}));
   renderFleet(); drawMap(); renderBoard(); renderCall(); renderRules(); renderLog(document.getElementById("log")); renderFoot(); setFlow(S.flow, true);
 }
@@ -619,37 +620,37 @@ function facts(list){ return arr(list).map(f => { const [a, b] = splitFact(f); r
 function tbl(head, rows){ return h("table", {}, h("thead", {}, h("tr", {}, head.map(x => h("th", {text:x})))), h("tbody", {}, rows.map(r => h("tr", {}, r.map((c, i) => h("td", {class:i === r.length - 1 ? "src" : null}, c)))))); }
 function pageAction(id){
   const o = optById(id); if (!o) return [h("p", {text:"No such action."})];
-  const state = o.refused ? "NOT POSSIBLE — " + arr(o.refused_by).join(", ") : o.proposed ? "PROPOSAL — ours, not ES policy, not priced" : arr(o.needs_signoff).length ? "NEEDS SIGN-OFF" : "No rule bent";
-  return [h("h2", {text:o.title}), h("p", {class:"lede", text:state + " · total " + eur(o.eur) + (o.eur != null ? " = " + eur(o.eur_table) + " from ES's cost table + " + eur(o.eur_assumed) + " on our stated assumptions" : "") }),
+  const state = o.refused ? "BLOCKED · " + arr(o.refused_by).join(", ") : o.proposed ? "PROPOSAL · not ES policy · not priced" : arr(o.needs_signoff).length ? "NEEDS SIGN-OFF" : "No rule flagged";
+  return [h("h2", {text:ttl(o)}), h("p", {class:"lede", text:state + (o.eur != null ? " · " + eur(o.eur) + " · " + split(o) : "") }),
     panel("Steps", null, tbl(["Do", "Car", "Where", "Train", "Basis"], arr(o.steps).map(st => [st.verb, st.car, shortName(st.at), st.train || "—", st.note || ""]))),
     AXES.map(([k, name]) => { const ax = (o.axes || {})[k] || {}, [cls, word] = verdict(o, k);
-      return panel(name, h("span", {class:"verdict " + cls, text:word}), h("div", {class:"body", style:"padding:8px 10px;font-weight:600", text:ax.headline || ""}), facts(ax.facts)); }),
+      return panel(name, h("span", {class:"verdict " + cls, text:word}), h("div", {class:"body", style:"padding:8px 10px;font-weight:600", text:tidy(ax.headline || "")}), facts(ax.facts)); }),
     arr(o.findings).length ? panel("Rule findings on these steps", null, tbl(["Rule", "Status", "Finding", "Source"], o.findings.map(f => [f.rule_id, f.status, f.message, f.cite || ""]))) : null,
-    h("p", {class:"muted", text:"Verdict words are ours: CLEAR from 80 points, TRADE-OFF from 50, HEAVY below. NO ANSWER means the data does not say; it is never counted as clear."})];
+    h("p", {class:"muted", text:"OK ≥ 80 · CAUTION ≥ 50 · IMPACT < 50 · NO DATA is never counted as OK"})];
 }
 function confSummary(){
-  if (!S.recorded) return "None recorded. No decision yet, so no message is drafted.";
+  if (!S.recorded) return "No decision yet.";
   const docs = (D.documents.by_option || {})[S.recorded.option] || {};
-  return arr(docs.messages).length ? outstanding(docs) : "No message drafted for this action.";
+  return arr(docs.messages).length ? outstanding(docs) : "No messages.";
 }
 function pageCase(){
   const nodes = arr(D.impact.nodes), kinds = k => nodes.filter(n => n.kind === k).map(n => n.label).join(", ") || "—";
   const missing = [];
   if (!INC.place) missing.push(["Where the car stands", "The plan cell gives no place."]);
   if (LIVE) { const notes = (LIVE.ops || []).filter(o => o.line === LIVE.line && o.note).map(o => o.date + ": “" + o.note + "” (" + o.cite + ")").join(" · ");
-    missing.push(["Which car the log means", "The ES log for this line reads: " + (notes || "no note on file") + ". It does not give a full car number; we read it as " + (INC.car || "") + " because the plan changes that car's code the same day."]); }
+    missing.push(["Which car the log means", "Log gives no full car number. Read as " + (INC.car || "") + " from the plan cell. Log: " + (notes || "no note")]); }
   for (const o of arr(D.options)) for (const st of arr(o.steps)) if (/ASSUMPTION/.test(st.note || "")){ missing.push(["Direction of the train", st.note]); break; }
-  missing.push(["Whether a reserve car is physically fit", "Not in the data."], ["Confirmations from partners", confSummary()], ["Price of one shunting move", "Not in the rulebook; €300 is our placeholder."]);
+  missing.push(["Reserve car fit for service", "Not in the data."], ["Action taken that night", LIVE ? "Plan shows the car kept in train, not sold. Not among the options here; options are priced as if the car were sold." : "Not in the data."], ["Confirmations from partners", confSummary()], ["Price of one shunting move", "Not in the rulebook. €300 estimate."]);
   const seen = new Set(), miss = missing.filter(m => !seen.has(m[0]) && seen.add(m[0]));
   return [h("h2", {text:"Case file"}), h("p", {class:"lede", text:INC.note || ""}),
     h("div", {class:"g2"},
       panel("The case", null, tbl(["Field", "Value"], [["Type", String(INC.kind || "").replace(/_/g, " ")], ["Car", INC.car || "—"], ["Date", INC.date || "not given in the rulebook"],
         ["Decision deadline", LIVE ? "Planned departure " + LIVE.planned_dep.slice(0, 5) + ", " + LIVE.points[0].name + " (Infrabel)" : "not on file"],
         ["Trains", [...affectedTrains()].join(", ") || "—"], ["Lines", kinds("line")], ["Places", kinds("place")], ["Partners", kinds("partner")],
-        ["Responsible", D.user || "—"], ["Status", S.recorded ? "Decision recorded: " + optById(S.recorded.option).title : "Awaiting the planner's call"], ["Source", INC.cite || "—"]])),
-      panel("Missing information · stays unresolved until evidence arrives", null, tbl(["What", "Why it is open"], miss))),
+        ["Responsible", D.user || "—"], ["Status", S.recorded ? "Decided: " + ttl(optById(S.recorded.option)) : "Decision pending"], ["Source", INC.cite || "—"]])),
+      panel("Open items", null, tbl(["What", "Why it is open"], miss))),
     S.recorded ? panel("Messages and confirmations", null, tbl(["To", "Subject", "State"], arr(((D.documents.by_option || {})[S.recorded.option] || {}).messages).map(m => [m.to, m.subject, confTag(m.to, true)]))) : null,
-    panel("Why each party is affected", null, tbl(["Hop", "From", "To", "Why", "Source"], arr(D.impact.edges).slice().sort((a,b) => (a.hop||1) - (b.hop||1)).map(e =>
+    panel("Impact chain", null, tbl(["Hop", "From", "To", "Why", "Source"], arr(D.impact.edges).slice().sort((a,b) => (a.hop||1) - (b.hop||1)).map(e =>
       [String(e.hop || 1), (nodes.find(n => n.id === e.src) || {}).label || e.src, (nodes.find(n => n.id === e.dst) || {}).label || e.dst, e.why || "", e.cite || ""]))),
     LIVE ? panel("ES operations log", null, tbl(["Line", "Date", "Dep", "Arr", "Pax", "Note", "Cell"], arr(LIVE.ops).map(o => [o.line, o.date, o.dep_delay == null ? "—" : "+" + o.dep_delay, o.arr_delay == null ? "—" : "+" + o.arr_delay, String(o.pax ?? "—"), o.note, o.cite.split(" · ")[1]]))) : null,
     LIVE ? panel("Running data · " + LIVE.source + " · " + LIVE.licence, null, tbl(["Point", "Planned", "Actual", "Delay"], LIVE.points.map(p =>
@@ -658,32 +659,31 @@ function pageCase(){
 }
 function pageDocs(){
   const id = S.recorded ? S.recorded.option : S.sel, docs = (D.documents.by_option || {})[id] || {}, a = D.documents.audit || {};
-  return [h("h2", {text:"Documents"}), h("p", {class:"lede", text:"Drafted for: " + (optById(id) || {}).title + ". The tool drafts; sending and confirming stays with the planner."}),
+  return [h("h2", {text:"Documents"}), h("p", {class:"lede", text:"For: " + ttl(optById(id)) + ". Drafts only; nothing is sent."}),
     h("div", {class:"g2"},
       panel("Task order to TCS (German)", null, docs.error ? h("div", {class:"norule", text:docs.error}) : h("pre", {text:docs.task_order_de || "—"})),
       h("div", {style:"display:flex;flex-direction:column;gap:12px"},
-        arr(docs.messages).map(m => panel(m.to, S.recorded ? confTag(m.to, true) : h("span", {class:"tagb x", text:"DRAFTED · NO DECISION YET"}), h("pre", {text:m.subject + "\n\n" + m.body}))))),
+        arr(docs.messages).map(m => panel(m.to, S.recorded ? confTag(m.to, true) : h("span", {class:"tagb x", text:"DRAFT"}), h("pre", {text:m.subject + "\n\n" + m.body}))))),
     panel("Decision entry", null, tbl(["Field", "Value"], [
       ["Entry written at build (rank 1 action)", "sha256 " + (a.hash || "")], ["Chained after", a.prev || "—"], ["Written", (a.at || "") + " · " + (a.user || "")],
       ["This session", S.recorded ? S.recorded.option + " · " + S.recorded.reason + " · " + S.recorded.at + " · " + S.recorded.seal : "no decision recorded yet"],
-      ["Store", "An append-only, hash-chained log file (build/audit.jsonl), not a database. The chain proves order and integrity, not truth."]]))];
+      ["Store", "Append-only hash-chained log file (build/audit.jsonl). Proves order and integrity."]]))];
 }
 function pageScan(){
   const v = D.validation, f = arr(D.findings), groups = ["violation", "warning", "unknown", "ok"];
-  return [h("h2", {text:"Whole-plan scan and proof"}), v ? h("div", {class:"big", text:v.headline}) : null,
+  return [h("h2", {text:"Plan scan"}), v ? h("div", {class:"big", text:String(v.headline).split(" — ")[0].replace(" are written into the plan", " in the plan")}) : null,
     v ? panel("What the scan found", null, arr(v.facts).map(x => h("div", {class:"fact", style:"grid-template-columns:1fr"}, h("span", {text:x})))) : null,
-    panel("Case types · what is built today", null, tbl(["Case type", "State", "Note"], arr(D.case_types).map(c => [c[0], h("span", {class:"tagb " + (c[1] === "built" ? "g" : c[1] === "partly" ? "c" : "x"), text:c[1].toUpperCase()}), c[2]]))),
     f.length ? panel("Rule findings on this day, all lines · " + f.length, null, tbl(["Rule", "Status", "Finding", "Source"], groups.flatMap(g => f.filter(x => x.status === g)).map(x =>
       [x.rule_id, x.status, x.message, (x.cite || "") + (arr(x.evidence)[0] ? " · " + x.evidence[0].sheet + "!" + x.evidence[0].cell : "")]))) : null,
-    panel("Assumptions, stated", null, arr(D.assumptions).map(x => h("div", {class:"fact", style:"grid-template-columns:1fr"}, h("span", {text:x})))),
-    h("p", {class:"muted", text:"Not claimed: measured usability, time saved, or money saved. Those need a planner and a stopwatch."})];
+    panel("Assumptions", null, arr(D.assumptions).map(x => h("div", {class:"fact", style:"grid-template-columns:1fr"}, h("span", {text:x})))),
+    null];
 }
 function route(){
   const pg = document.getElementById("page"), [name, arg] = decodeURIComponent(location.hash.slice(1)).split("/");
-  const pages = {action:["Action", () => pageAction(arg)], "case":["Case file", pageCase], documents:["Documents", pageDocs], scan:["Scan and proof", pageScan]};
+  const pages = {action:["Action", () => pageAction(arg)], "case":["Case file", pageCase], documents:["Documents", pageDocs], scan:["Plan scan", pageScan]};
   if (!pages[name]){ pg.classList.remove("on"); pg.replaceChildren(); return; }
-  pg.replaceChildren(h("div", {class:"pbar"}, h("button", {text:"← BACK TO THE DESK", onclick:back}), h("h1", {text:pages[name][0]}),
-    h("nav", {}, [["case", "Case file"], ["action/" + S.sel, "Action"], ["documents", "Documents"], ["scan", "Scan and proof"]].map(([hs, t]) => h("button", {text:t, onclick:() => { location.hash = hs; }})))),
+  pg.replaceChildren(h("div", {class:"pbar"}, h("button", {text:"← BACK", onclick:back}), h("h1", {text:pages[name][0]}),
+    h("nav", {}, [["case", "Case file"], ["action/" + S.sel, "Action"], ["documents", "Documents"], ["scan", "Plan scan"]].map(([hs, t]) => h("button", {text:t, onclick:() => { location.hash = hs; }})))),
     h("div", {class:"pbody"}, pages[name][1]()));
   pg.classList.add("on"); pg.scrollTop = 0;
 }
