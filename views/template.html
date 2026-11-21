@@ -98,6 +98,9 @@ text-transform:uppercase;color:var(--ink)}
 
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:10px}
 #map{display:block;width:100%;height:270px}
+#td{display:block;width:100%;height:300px}
+#td text{font:700 10.5px var(--mono);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+#rules{border-top:2px solid var(--ink)}
 .lbl-t{font:600 12px var(--sans);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
 .tag-t{font:800 11px var(--mono);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
 .pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.6s ease-out infinite}
@@ -513,6 +516,7 @@ function tick(){
   sim += dt * rate;
   while (queue.length && queue[0][0] <= sim){ const e = queue.shift(); addLog(fmtHM(e[0]), e[1], e[2]); if (e[3]) { S.departed = e[0]; renderFleet(); } if (!queue.length) endReplay(); }
   document.getElementById("clock").textContent = fmtT(sim);
+  const tdk = Math.floor(sim / 60e3) + (S.replay ? "r" : ""); if (tdk !== tdKey){ tdKey = tdk; drawTD(); }
   const nx = document.getElementById("next"), v = document.getElementById("nextv"), k = document.getElementById("nextk");
   const d = Math.round((PLAN_DEP - sim) / 1000), a = Math.abs(d), hms = pad(Math.floor(a/3600)) + ":" + pad(Math.floor(a/60) % 60) + ":" + pad(a % 60);
   if (S.departed){ nx.className = "next done"; k.textContent = "TRAIN " + LIVE.train + " DEPARTED"; v.textContent = fmtHM(S.departed) + " · +" + mins(LIVE.points[0].delay_dep_s) + " MIN"; }
@@ -520,6 +524,42 @@ function tick(){
     v.textContent = (d >= 0 ? "T-" : "T+") + hms; }
   document.querySelectorAll("[data-t]").forEach(el => { const t = +el.dataset.t, dd = Math.round((t - sim) / 1000), aa = Math.abs(dd);
     el.textContent = (dd >= 0 ? "T-" : "T+") + pad(Math.floor(aa/3600)) + ":" + pad(Math.floor(aa/60) % 60) + ":" + pad(aa % 60); });
+}
+
+/* ---------- time-distance: plan against what ran ---------- */
+const TD_ST = [["Brussel-Zuid","Brussels"],["Leuven","Leuven"],["Liege-Guillemins","Liège"],["Verviers-Central","Verviers"],["Welkenraedt","Welkenr."],["Hergenrath","Hergenrath"]];
+let tdKey = null;
+function drawTD(){
+  const svg = document.getElementById("td"); if (!svg || !LIVE) return;
+  const P = TD_ST.map(([n, lab]) => { const p = LIVE.points.find(q => q.name === n); return p ? {lab, pa:tms(p.plan_arr || p.plan_dep, PLAN_DEP), pl:tms(p.plan_dep || p.plan_arr, PLAN_DEP), ra:tms(p.real_arr || p.real_dep, PLAN_DEP), re:tms(p.real_dep || p.real_arr, PLAN_DEP), d:mins(p.delay_dep_s ?? p.delay_arr_s), rt:(p.real_dep || p.real_arr).slice(0, 5)} : null; }).filter(Boolean);
+  if (P.length < 2) return;
+  const box = svg.getBoundingClientRect(), w = Math.max(300, box.width), ht = Math.max(220, box.height), M = {l:48, r:40, t:30, b:10};
+  svg.setAttribute("viewBox", `0 0 ${w} ${ht}`); svg.replaceChildren();
+  const H = 3600e3, t0 = Math.floor((PLAN_DEP - 40*60e3) / H) * H, t1 = Math.ceil(Math.max(...P.map(p => p.re)) / H) * H;
+  const x = i => M.l + i * (w - M.l - M.r) / (P.length - 1), y = t => M.t + (Math.min(t1, Math.max(t0, t)) - t0) / (t1 - t0) * (ht - M.t - M.b);
+  for (let t = t0; t <= t1; t += H){ svg.append(s("line", {x1:M.l - 4, x2:w - M.r + 30, y1:y(t), y2:y(t), stroke:"#D5D9E0", "stroke-width":1}));
+    svg.append(s("text", {x:M.l - 8, y:y(t) + 4, "text-anchor":"end"}, fmtHM(t))); }
+  P.forEach((p, i) => { svg.append(s("line", {x1:x(i), x2:x(i), y1:M.t, y2:ht - M.b, stroke:"#A9AFBC", "stroke-width":1}));
+    svg.append(s("text", {x:x(i), y:M.t - 12, "text-anchor":"middle"}, p.lab)); });
+  svg.append(s("polyline", {points:P.map((p, i) => x(i) + "," + y(p.pa) + " " + x(i) + "," + y(p.pl)).join(" "), fill:"none", stroke:"#475569", "stroke-width":2, "stroke-dasharray":"6 4"}));
+  const drawNow = () => { if (sim > t1) return; svg.append(s("line", {x1:M.l - 6, x2:w - M.r + 30, y1:y(sim), y2:y(sim), stroke:"#40002C", "stroke-width":2, "stroke-dasharray":"7 4"}));
+    svg.append(s("text", {x:w - M.r + 30, y:y(sim) - 5, "text-anchor":"end", style:"fill:#40002C"}, "NOW " + fmtHM(sim))); };
+  if (S.replay){
+    const E = P.flatMap((p, i) => i ? [[i, p.ra], [i, p.re]] : [[i, p.re]]);
+    const pts = [[x(0), y(PLAN_DEP)], [x(0), y(Math.min(sim, P[0].re))]]; let head = null;
+    if (sim >= P[0].re) for (let j = 0; j < E.length - 1; j++){
+      const [a, ta] = E[j], [b, tb] = E[j+1];
+      if (sim >= tb){ pts.push([x(b), y(tb)]); continue; }
+      const f = tb > ta ? (sim - ta) / (tb - ta) : 1; head = [x(a) + f * (x(b) - x(a)), y(sim)]; pts.push(head); break; }
+    svg.append(s("polyline", {points:pts.map(q => q.join(",")).join(" "), fill:"none", stroke:"#C81E1E", "stroke-width":4, "stroke-linejoin":"round", "stroke-linecap":"round"}));
+    P.forEach((p, i) => { if (sim < p.ra) return; svg.append(s("circle", {cx:x(i), cy:y(p.ra), r:4, fill:"#fff", stroke:"#1A0A14", "stroke-width":2}));
+      if (i === 0 || i === 2 || i === P.length - 1) svg.append(s("text", {x:x(i) + (i === P.length - 1 ? -8 : 8), y:y(p.ra) - 9, "text-anchor":i === P.length - 1 ? "end" : "start", style:"fill:#C81E1E"}, p.rt + " +" + p.d)); });
+    if (head) svg.append(s("path", {d:`M${head[0]} ${head[1]-6}l6 6l-6 6l-6-6z`, fill:"#1A0A14"}));
+    else if (sim < P[0].re && sim > PLAN_DEP) svg.append(s("text", {x:x(0) + 8, y:y(sim) + 14, style:"fill:#C81E1E"}, "HELD +" + Math.round((sim - PLAN_DEP) / 60e3)));
+  }
+  drawNow();
+  svg.append(s("circle", {cx:x(0), cy:y(PLAN_DEP), r:5, fill:"#C81E1E", stroke:"#1A0A14", "stroke-width":1.5}));
+  svg.append(s("text", {x:x(0) + 9, y:y(PLAN_DEP) - 6, style:"fill:#C81E1E"}, "DECIDE BY " + fmtHM(PLAN_DEP)));
 }
 
 /* ---------- fleet strip ---------- */
@@ -605,14 +645,15 @@ function build(){
               h("span", {}, h("i", {style:"border-top:4px solid #F2A900"}), "knock-on"), h("span", {}, h("i", {style:"border-top:3px dashed #15803D"}), "car move"),
               h("span", {text:(INC.place ? "▲ incident" : "▲ first move · car location unknown") + " · □ workshop"}))),
           h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {id:"board-ttl", text:"Checks"})),
-            h("div", {id:"board"}))),
-        h("div", {class:"two"},
-          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {text:"Rules"})), h("div", {id:"rules"})),
+            h("div", {id:"board"}), h("div", {id:"rules"}))),
+        h("div", {class:"two", style:LIVE ? null : "grid-template-columns:1fr"},
+          LIVE ? h("section", {class:"panel sec-affected sec-proof"}, h("header", {}, h("h2", {text:"Time-distance · " + LIVE.train + " · Belgium"}), h("span", {class:"lab muted", text:"- - plan · ━ ran"})),
+            s("svg", {id:"td", role:"img", "aria-label":"Time-distance diagram, train " + LIVE.train + ", planned against recorded"})) : null,
           h("section", {class:"panel sec-receive"}, h("header", {}, h("h2", {text:"Event log"}), h("span", {class:"lab muted", text:LIVE ? "replay" : "this session"})), h("div", {class:"log", id:"log"})))),
       h("div", {class:"col"},
         h("section", {class:"panel sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Decision"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})))),
     h("div", {class:"foot sec-proof", id:"foot"}));
-  renderFleet(); drawMap(); renderBoard(); renderCall(); renderRules(); renderLog(document.getElementById("log")); renderFoot(); setFlow(S.flow, true);
+  renderFleet(); drawMap(); drawTD(); renderBoard(); renderCall(); renderRules(); renderLog(document.getElementById("log")); renderFoot(); setFlow(S.flow, true);
 }
 
 /* ---------- detail pages ---------- */
@@ -690,7 +731,7 @@ function route(){
 function back(){ history.replaceState(null, "", location.pathname + location.search); route(); }
 
 window.addEventListener("hashchange", route);
-window.addEventListener("resize", drawMap);
+window.addEventListener("resize", () => { drawMap(); drawTD(); });
 window.addEventListener("keydown", e => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" && e.key.startsWith("Arrow")) return;
   if (e.key === "Escape") back();
