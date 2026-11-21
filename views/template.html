@@ -147,7 +147,10 @@ font:700 12px var(--mono)}
 .rec dt{font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .rec dd{margin:0;overflow-wrap:anywhere}
 .sent{padding:0 10px 10px}
-.sent .m{display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 0;border-top:1px solid var(--rule);font-size:13px}
+.confcell{display:flex;gap:6px;align-items:start;flex-wrap:wrap;justify-content:flex-end}
+button.mini{font:800 10px var(--mono);letter-spacing:.06em;padding:1px 6px;border:1.5px solid var(--ink);border-radius:2px;background:var(--ink);color:#fff;cursor:pointer}
+.outst{font-size:12px;padding:6px 0 0;border-top:1px solid var(--rule)}
+.sent .m{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;padding:5px 0;border-top:1px solid var(--rule);font-size:13px}
 .rule{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:13px}
 .rule .id{font:800 11px var(--mono);letter-spacing:.06em;margin-right:6px}
 .rule q{display:block;color:var(--muted);margin-top:2px;font-size:12px}
@@ -202,7 +205,7 @@ const LIVE = D.live || null, INC = D.incident || {};
 const LABELS = {BRU:{dx:8,dy:16,a:"start"}, DDL:{dx:-8,dy:-7,a:"end"}, HBTH:{dx:-8,dy:-8,a:"end"}, ELEN:{dx:9,dy:-7,a:"start"},
   EMSTG:{dx:-8,dy:15,a:"end"}, BER:{dx:8,dy:-7,a:"start"}, PRG:{dx:0,dy:18,a:"middle"}, PAR:{dx:0,dy:18,a:"middle"},
   KAR:{dx:-9,dy:4,a:"end"}, CRA:{dx:9,dy:4,a:"start"}, MIL:{dx:9,dy:4,a:"start"}, AMS:{dx:-8,dy:-6,a:"end"}};
-const S = {sel:D.chosen, recorded:null, armed:0, armTimer:null, flow:0, acked:false, replay:false, departed:null, log:[]};
+const S = {sel:D.chosen, recorded:null, conf:{}, armed:0, armTimer:null, flow:0, acked:false, replay:false, departed:null, log:[]};
 
 function h(tag, props, ...kids){
   const e = document.createElement(tag);
@@ -399,7 +402,8 @@ function renderCall(){
     kids.push(h("div", {class:"sent"}, h("div", {class:"lab", text:"Coordinate execution"}),
       docs.error ? h("div", {class:"norule", text:"NO DOCUMENT DRAFTED · " + docs.error}) : [
         h("div", {class:"m"}, h("span", {}, h("b", {text:"Task order (German)"}), " · " + String(docs.task_order_de || "").split("\n").filter(x => x.startsWith("- ")).length + " lines"), more("Open", "documents")),
-        arr(docs.messages).map(m => h("div", {class:"m"}, h("span", {}, h("b", {text:m.to}), " · " + m.subject), h("span", {class:"tagb x", text:"DRAFTED · UNCONFIRMED"})))],
+        arr(docs.messages).map(m => h("div", {class:"m"}, h("span", {}, h("b", {text:m.to}), " · " + m.subject), confTag(m.to, true))),
+        arr(docs.messages).length ? h("div", {class:"outst", text:outstanding(docs)}) : null],
       h("div", {class:"hint", style:"padding:6px 0 0", text:"A correction is added after this entry, never written over it."}),
       h("div", {style:"display:flex;gap:8px;margin-top:6px"},
         LIVE && !S.replay ? h("button", {class:"arm", id:"replaybtn", text:"▶ REPLAY THE NIGHT", onclick:startReplay}) : null,
@@ -443,7 +447,23 @@ async function confirmCall(){
   addLog(nowLabel(), "DRAFTED", "Task order and " + arr(((D.documents.by_option || {})[S.sel] || {}).messages).length + " partner messages drafted. No confirmation recorded yet.");
   setFlow(3, true); renderCall(); renderBoard(); renderFoot();
 }
-function reopen(){ addLog(nowLabel(), "REOPEN", "Decision reopened. The earlier entry stays in the log."); S.recorded = null; renderCall(); renderBoard(); renderFoot(); }
+function confTag(to, withBtn){
+  const c = S.conf[to];
+  if (c) return h("span", {class:"tagb g", text:"✓ CONFIRMED " + c.at + " · ENTERED BY HAND"});
+  return h("span", {class:"confcell"}, h("span", {class:"tagb x", text:"DRAFTED · UNCONFIRMED"}),
+    withBtn ? h("button", {class:"mini", text:"MARK CONFIRMED", onclick:() => markConfirmed(to)}) : null);
+}
+function outstanding(docs){
+  const all = arr(docs.messages).map(m => m.to), open = all.filter(t => !S.conf[t]);
+  return (all.length - open.length) + " of " + all.length + " confirmed · " + (open.length ? "still open: " + open.join(", ") : "nothing outstanding") + ". The planner enters a confirmation by hand; this tool does not send or receive messages.";
+}
+function markConfirmed(to){
+  if (!S.recorded || S.conf[to]) return;
+  S.conf[to] = {at:nowLabel(), by:S.recorded.user};
+  addLog(nowLabel(), "CONFIRMED", to + " — confirmation entered by hand by " + S.recorded.user + ".");
+  renderCall(); if (location.hash) route();
+}
+function reopen(){ addLog(nowLabel(), "REOPEN", "Decision reopened. The earlier entry stays in the log." + (Object.keys(S.conf).length ? " Confirmations entered for it no longer count." : "")); S.conf = {}; S.recorded = null; renderCall(); renderBoard(); renderFoot(); }
 
 function renderRules(){
   const el = document.getElementById("rules"); if (!el) return;
@@ -607,6 +627,11 @@ function pageAction(id){
     arr(o.findings).length ? panel("Rule findings on these steps", null, tbl(["Rule", "Status", "Finding", "Source"], o.findings.map(f => [f.rule_id, f.status, f.message, f.cite || ""]))) : null,
     h("p", {class:"muted", text:"Verdict words are ours: CLEAR from 80 points, TRADE-OFF from 50, HEAVY below. NO ANSWER means the data does not say; it is never counted as clear."})];
 }
+function confSummary(){
+  if (!S.recorded) return "None recorded. No decision yet, so no message is drafted.";
+  const docs = (D.documents.by_option || {})[S.recorded.option] || {};
+  return arr(docs.messages).length ? outstanding(docs) : "No message drafted for this action.";
+}
 function pageCase(){
   const nodes = arr(D.impact.nodes), kinds = k => nodes.filter(n => n.kind === k).map(n => n.label).join(", ") || "—";
   const missing = [];
@@ -614,7 +639,7 @@ function pageCase(){
   if (LIVE) { const notes = (LIVE.ops || []).filter(o => o.line === LIVE.line && o.note).map(o => o.date + ": “" + o.note + "” (" + o.cite + ")").join(" · ");
     missing.push(["Which car the log means", "The ES log for this line reads: " + (notes || "no note on file") + ". It does not give a full car number; we read it as " + (INC.car || "") + " because the plan changes that car's code the same day."]); }
   for (const o of arr(D.options)) for (const st of arr(o.steps)) if (/ASSUMPTION/.test(st.note || "")){ missing.push(["Direction of the train", st.note]); break; }
-  missing.push(["Whether a reserve car is physically fit", "Not in the data."], ["Confirmations from partners", "None recorded. Messages are drafted, not sent by this tool."], ["Price of one shunting move", "Not in the rulebook; €300 is our placeholder."]);
+  missing.push(["Whether a reserve car is physically fit", "Not in the data."], ["Confirmations from partners", confSummary()], ["Price of one shunting move", "Not in the rulebook; €300 is our placeholder."]);
   const seen = new Set(), miss = missing.filter(m => !seen.has(m[0]) && seen.add(m[0]));
   return [h("h2", {text:"Case file"}), h("p", {class:"lede", text:INC.note || ""}),
     h("div", {class:"g2"},
@@ -623,6 +648,7 @@ function pageCase(){
         ["Trains", [...affectedTrains()].join(", ") || "—"], ["Lines", kinds("line")], ["Places", kinds("place")], ["Partners", kinds("partner")],
         ["Responsible", D.user || "—"], ["Status", S.recorded ? "Decision recorded: " + optById(S.recorded.option).title : "Awaiting the planner's call"], ["Source", INC.cite || "—"]])),
       panel("Missing information · stays unresolved until evidence arrives", null, tbl(["What", "Why it is open"], miss))),
+    S.recorded ? panel("Messages and confirmations", null, tbl(["To", "Subject", "State"], arr(((D.documents.by_option || {})[S.recorded.option] || {}).messages).map(m => [m.to, m.subject, confTag(m.to, true)]))) : null,
     panel("Why each party is affected", null, tbl(["Hop", "From", "To", "Why", "Source"], arr(D.impact.edges).slice().sort((a,b) => (a.hop||1) - (b.hop||1)).map(e =>
       [String(e.hop || 1), (nodes.find(n => n.id === e.src) || {}).label || e.src, (nodes.find(n => n.id === e.dst) || {}).label || e.dst, e.why || "", e.cite || ""]))),
     LIVE ? panel("ES operations log", null, tbl(["Line", "Date", "Dep", "Arr", "Pax", "Note", "Cell"], arr(LIVE.ops).map(o => [o.line, o.date, o.dep_delay == null ? "—" : "+" + o.dep_delay, o.arr_delay == null ? "—" : "+" + o.arr_delay, String(o.pax ?? "—"), o.note, o.cite.split(" · ")[1]]))) : null,
@@ -636,7 +662,7 @@ function pageDocs(){
     h("div", {class:"g2"},
       panel("Task order to TCS (German)", null, docs.error ? h("div", {class:"norule", text:docs.error}) : h("pre", {text:docs.task_order_de || "—"})),
       h("div", {style:"display:flex;flex-direction:column;gap:12px"},
-        arr(docs.messages).map(m => panel(m.to, h("span", {class:"tagb x", text:"DRAFTED · NO CONFIRMATION RECORDED"}), h("pre", {text:m.subject + "\n\n" + m.body}))))),
+        arr(docs.messages).map(m => panel(m.to, S.recorded ? confTag(m.to, true) : h("span", {class:"tagb x", text:"DRAFTED · NO DECISION YET"}), h("pre", {text:m.subject + "\n\n" + m.body}))))),
     panel("Decision entry", null, tbl(["Field", "Value"], [
       ["Entry written at build (rank 1 action)", "sha256 " + (a.hash || "")], ["Chained after", a.prev || "—"], ["Written", (a.at || "") + " · " + (a.user || "")],
       ["This session", S.recorded ? S.recorded.option + " · " + S.recorded.reason + " · " + S.recorded.at + " · " + S.recorded.seal : "no decision recorded yet"],

@@ -32,6 +32,6 @@ Week 3-4: write the chosen option back to the planning grid and send the German 
 - A shunting move is priced at €300 and a car taken out at 35 passengers × €100: both are our placeholders (reference/costs.json). Refund exposure uses the log's own late-passenger count where it is filled in. Which rules are hard is not confirmed by ES.
 - Options marked PROPOSAL are ours, not ES policy.
 - 5 October 2026: the operations log reports a broken sleeper without a full car number. We use 70 004 because the plan cell Milan!I38 marks it "in train, not commercial" that night. The plan shows ES kept the car in the train unsold; Relay does not propose that action, and prices its actions as if the car were still sold.
-- The decision is sealed in the browser (sha256, chained after the build's last audit entry) and is not written back to the log file. Documents are drafted only; no confirmation from a partner is recorded.
+- The decision is sealed in the browser (sha256, chained after the build's last audit entry) and is not written back to the log file. Documents are drafted only; the tool does not send or receive messages. The planner can mark a message confirmed by hand; that mark lives in the browser session and is not sealed.
 - The audit log is a hash-chained file, not a database. A hash chain proves order and integrity, not truth.
 - Case types: car defect and the Friday pre-positioning case are built; the rest are marked partly built or not built on the case-file page.
