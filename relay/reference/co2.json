@@ -1,0 +1,142 @@
+{
+  "_note": "Emission factors for the CO2 estimate. Each factor carries a `cite` and a `url`. `assumption: true` marks a number we chose ourselves (or derived), not a figure taken directly from a source. The tools in relay/co2.py read only this file and reference/network.json; there are no numbers hard-coded in the code.",
+  "_confidence": "This is a rough, order-of-magnitude estimate, not a verified carbon account. The shunting and train-km figures are our own choices built on citable unit factors; see each `cite`.",
+
+  "factors": {
+    "diesel_kg_co2_per_litre": {
+      "value": 2.693,
+      "unit": "kg CO2 per litre diesel",
+      "cite": "IPCC default CO2 emission factor for gas/diesel oil, 74.1 kg CO2 per GJ and ~36.3 MJ per litre; commonly quoted as ~2.68-2.69 kg CO2/litre (matches NZ MfE and DESNZ country factors, ~2.51-2.67 kg CO2e/litre depending on biofuel content). We use the pure-mineral-diesel value.",
+      "url": "https://www.eia.gov/environment/emissions/co2_vol_mass.php",
+      "assumption": false
+    },
+    "shunting_l_per_hour": {
+      "value": 25,
+      "unit": "litres diesel per hour, one shunting locomotive under load",
+      "cite": "ASSUMPTION, ours: a diesel shunting (yard) locomotive burns roughly 20-30 litres/hour at work (reported idle consumption ~23-25 L/h; larger line-haul units run far higher). We take 25 L/h as the midpoint.",
+      "url": "https://www.cspub-jcc-submission.org/index.php/jcc/article/download/319/224",
+      "assumption": true
+    },
+    "minutes_per_shunting_move": {
+      "value": 20,
+      "unit": "minutes of locomotive work per shunting move",
+      "cite": "ASSUMPTION, ours: one shunting move (pull a car out, place it) assumed to occupy the shunting locomotive for about 20 minutes including travel within the yard. No measured figure in the data.",
+      "url": "",
+      "assumption": true
+    },
+    "extra_transport_l_per_train_km": {
+      "value": 5,
+      "unit": "litres diesel per train-km, one diesel loco hauling a few empty cars",
+      "cite": "ASSUMPTION, ours: one diesel locomotive hauling a short rake of empty sleeping cars assumed to use about 5 litres/km (line-haul diesels are in the single-digit litres/km at moderate speed and light load). Notified by the fuel-consumption range quoted for rail diesels.",
+      "url": "https://eurosenstelematics.com/en/home-page/slider-solutions/locomotive-fuel-consumption-control/",
+      "assumption": true
+    },
+    "electric_kwh_per_train_km": {
+      "value": 12,
+      "unit": "kWh electricity per train-km, electric locomotive with coaches, taken at traction input",
+      "cite": "ASSUMPTION, ours but within published range: rail freight consumption studies quote ~0.01-0.02 kWh per gross-tonne-km; a ~600-800 t night train at ~15-20 kWh/train-km is the resulting order. We take 12 kWh/train-km at the traction input (low end; excludes depot/aux).",
+      "url": "https://www.sciencedirect.com/science/article/pii/S2590198225003355",
+      "assumption": true
+    },
+    "grid_g_co2_per_kwh": {
+      "value": 353,
+      "unit": "g CO2 per kWh, average German electricity mix, 2024",
+      "cite": "German electricity-mix emission factor for 2024 (353 g CO2/kWh). Used because the workshops and the detour route are in Germany; a detour through Belgium/Switzerland would have a different (lower) grid factor, which we do not model.",
+      "url": "https://www.statista.com/statistics/1386327/co2-emissions-factor-electricity-mix-germany/",
+      "assumption": false
+    }
+  },
+
+  "_derived_note": "The two train-km costs below are computed from the factors above and carried here so the code reads one place: extra_transport_kg_per_km = 5 L/km x 2.693 = 13.465; detour_kg_per_km = 12 kWh/km x 353 g/kWh / 1000 = 4.236. They are repeated as explicit values with their own cite for transparency.",
+  "prices": {
+    "extra_transport_kg_per_train_km": {
+      "value": 13.465,
+      "unit": "kg CO2 per train-km (diesel loco hauling empty cars)",
+      "cite": "5 L/km (assumption) x 2.693 kg CO2/L (diesel factor) = 13.465 kg/km. Diesel traction: carries the extra_transport assumption.",
+      "url": "",
+      "assumption": true
+    },
+    "detour_kg_per_train_km": {
+      "value": 4.236,
+      "unit": "kg CO2 per train-km (extra distance on the electric night train)",
+      "cite": "12 kWh/km (assumption) x 353 g CO2/kWh (German grid, 2024) / 1000 = 4.236 kg/km. The kWh/km is our assumption; the grid factor is sourced.",
+      "url": "https://www.statista.com/statistics/1386327/co2-emissions-factor-electricity-mix-germany/",
+      "assumption": true
+    }
+  },
+
+  "shunting_kg_per_move": {
+    "value": 22.44,
+    "unit": "kg CO2 per shunting move",
+    "cite": "25 L/h (assumption) x 20 min / 60 = 8.33 L per move; x 2.693 kg CO2/L = 22.44 kg per move. See the shunting factors above.",
+    "url": "",
+    "assumption": true
+  },
+
+  "_distances_note": "reference/network.json gives only lon/lat per place (APPROXIMATE city positions, for drawing), no distances. The table below is therefore OURS: straight-line (great-circle) distance between the two towns from those coordinates, multiplied by 1.30 to approximate rail distance (rail follows real alignments, not the crow line). These are rough approximations, not surveyed track distances; verify against a route-planning tool before relying on any single pair.",
+  "distances_km": {
+    "DDL-CRA": {
+      "km": 611,
+      "cite": "DDL-CRA straight-line 470 km (great-circle from network.json lon/lat) x 1.30 = 611 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "KAR-CRA": {
+      "km": 159,
+      "cite": "KAR-CRA straight-line 122 km x 1.30 = 159 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "DDL-EMSTG": {
+      "km": 357,
+      "cite": "DDL-EMSTG straight-line 275 km x 1.30 = 357 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "EMSTG-HBTH": {
+      "km": 64,
+      "cite": "EMSTG-HBTH straight-line 50 km x 1.30 = 64 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "ELEN-HBTH": {
+      "km": 64,
+      "cite": "ELEN-HBTH straight-line 49 km x 1.30 = 64 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "DDL-SCH": {
+      "km": 28,
+      "cite": "DDL-SCH straight-line 22 km x 1.30 = 28 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "DDL-ELEN": {
+      "km": 390,
+      "cite": "DDL-ELEN straight-line 300 km x 1.30 = 390 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "CRA-MIL": {
+      "km": 539,
+      "cite": "CRA-MIL straight-line 415 km x 1.30 = 539 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    },
+    "DDL-MIL": {
+      "km": 925,
+      "cite": "DDL-MIL straight-line 712 km x 1.30 = 925 km. APPROXIMATION.",
+      "url": "",
+      "assumption": true
+    }
+  },
+
+  "_detour_note": "A detour step carries no distance in the step dict. Unless the step supplies a `km`/`extra_km` value, we assume a fixed extra distance. We mark the whole detour figure as an assumption.",
+  "detour_default_km": {
+    "value": 40,
+    "unit": "km extra distance per detour step when the step does not say",
+    "cite": "ASSUMPTION, ours: a detour via a workshop (e.g. the Milan train via Crailsheim) assumed to add about 40 km. Override by putting a number in the detour step's `km` field.",
+    "url": "",
+    "assumption": true
+  }
+}

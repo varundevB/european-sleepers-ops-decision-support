@@ -1,0 +1,21 @@
+{
+  "_source": "Rulebook 'How the car planning of ES works', section 12 cost table, unless marked assumption.",
+  "extra_transport": {
+    "bentheim_munster_lengerich": {"eur": 5000, "cite": "§12: Extra transport Bentheim – Münster – Lengerich, about €5,000"},
+    "karlsruhe_crailsheim": {"eur": 6000, "cite": "§12: Extra transport Karlsruhe – Crailsheim, about €6,000"},
+    "default": {"eur": 5500, "cite": "§1: one extra transport costs about €5,000 to €6,000 (midpoint)", "assumption": true}
+  },
+  "detour": {"eur_min": 500, "eur_max": 3500, "delay_min_low": 120, "delay_min_high": 180,
+             "cite": "§12: Detour about €500 to €3,500 extra; detour with the night train typically 2 to 3 hours of delay"},
+  "second_conductor": {"from_occupied_cars": 9, "eur": {"Prag": 1600, "Paris": 1600, "Milan": 3000},
+                       "cite": "§12: Second conductor (from 9 occupied cars) about €1,600 per one-way trip on Paris and Prague, about €3,000 on Milan"},
+  "electricity_per_car_trip": {"eur": 200, "cite": "§12: Electricity about €200 per car per one-way trip"},
+  "refund": {"over_60_min": 0.25, "over_120_min": 0.50,
+             "cite": "§12: >1 hour 25% of the ticket back; >2 hours at destination 50%"},
+  "avg_fare_eur": {"eur": 100, "assumption": true,
+                   "cite": "ASSUMPTION: €41m ticket sales / 410,000 passengers from the ES opening briefing slide (2026-11-21) = €100. No ticket prices are in the data."},
+  "shunting_move": {"eur": 300, "assumption": true,
+                    "cite": "ASSUMPTION, ours: €300 per shunting move. The rulebook gives no price for a move; this is a placeholder to make options comparable. Replace with ES's figure."},
+  "lost_car": {"pax": 35, "assumption": true,
+               "cite": "ASSUMPTION: a car taken out displaces about 35 passengers (median passengers per commercial car over 1,005 logged nights, Weekinfo ÷ plan grid), priced at the average fare as if every one were refunded in full — the worst case."}
+}

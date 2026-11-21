@@ -1,0 +1,43 @@
+{
+  "id": "friday_s11",
+  "title": "The real Friday (rulebook §11)",
+  "date": null,
+  "date_note": "The rulebook gives no date for this Friday. UNKNOWN - never invent one. Show 'a Friday'.",
+  "trains": {"474": {"line": "Paris", "direction": "return, Berlin to Paris, southbound past Lengerich"},
+             "453": {"line": "Prag", "direction": "outbound, Brussels to Prague, via Bad Bentheim"}},
+  "cars": [
+    {"car": "71 455", "owner": "RDC", "type": "WL33", "start": "ELEN"},
+    {"car": "71 118", "owner": "EE", "type": "Bvcmz5", "start": "EMSTG"},
+    {"car": "70 057", "owner": "EE", "type": "Bocmh6", "start": "EMSTG"},
+    {"car": "91 044", "owner": "RDC", "type": "Bvcmz6", "start": "EMSTG", "note": "left in Münster the day before because no shunter was available"},
+    {"car": "71 120", "owner": "RDC", "type": "Bvcmz5", "start": "ELEN", "note": "normal train: Paris (474)"},
+    {"car": "71 002", "owner": "RDC", "type": "Bvcmz5", "start": "ELEN", "note": "in the workshop until the call"},
+    {"car": "91 309", "owner": "Gff", "type": "Bimz", "start": "DDL", "note": "parked in Denderleeuw, wanted in the Paris train"}
+  ],
+  "first_order": [
+    {"verb": "abholen", "car": "71 455", "at": "ELEN"}, {"verb": "beistellen", "car": "71 455", "train": "453", "at": "HBTH"},
+    {"verb": "abholen", "car": "71 118", "at": "EMSTG"}, {"verb": "beistellen", "car": "71 118", "train": "453", "at": "HBTH"},
+    {"verb": "abholen", "car": "70 057", "at": "EMSTG"}, {"verb": "beistellen", "car": "70 057", "train": "453", "at": "HBTH"},
+    {"verb": "abholen", "car": "91 044", "at": "EMSTG"}, {"verb": "abstellen", "car": "91 044", "at": "ELEN"},
+    {"verb": "abholen", "car": "71 120", "at": "ELEN"}, {"verb": "beistellen", "car": "71 120", "train": "453", "at": "HBTH", "aim": "pass on to the Milan train for extra capacity"}
+  ],
+  "incident": {"id": "inc-friday-1", "kind": "car_available", "car": "71 002", "place": "ELEN",
+               "note": "The Lengerich workshop called to say that 71 002 was available. It was needed in the Paris train, which was not supposed to pick up anything yet.",
+               "cite": "§11: What changed during the day"},
+  "options_in_rulebook": [
+    {"id": "sent", "title": "71 120 and 71 002 both onto 474 at Lengerich; three cars added at Bad Bentheim", "status": "sent",
+     "why": "To prevent shunting and exchanges in Belgium. Changed nothing for 474 or 400 other than collecting the cars at Lengerich.",
+     "steps": [
+       {"verb": "abholen", "car": "71 120", "at": "ELEN"}, {"verb": "beistellen", "car": "71 120", "train": "474", "at": "ELEN"},
+       {"verb": "abholen", "car": "71 002", "at": "ELEN"}, {"verb": "beistellen", "car": "71 002", "train": "474", "at": "ELEN"},
+       {"verb": "beistellen", "car": "71 455", "train": "453", "at": "HBTH"}, {"verb": "beistellen", "car": "71 118", "train": "453", "at": "HBTH"},
+       {"verb": "beistellen", "car": "70 057", "train": "453", "at": "HBTH"}, {"verb": "abstellen", "car": "91 044", "at": "ELEN"}]},
+    {"id": "keep_first_order", "title": "Keep the first order: 71 120 to 453 at Bad Bentheim and on to the Milan train; 71 002 waits", "status": "superseded",
+     "why": "Would need shunting and exchanges in Belgium to pass 71 120 to the Milan train."},
+    {"id": "rejected_a", "title": "Collect 91 309 in Denderleeuw on the Prague train, take it to Bad Bentheim, extra transport to the Paris train", "status": "rejected",
+     "why": "Too many extra transports and shunting moves."},
+    {"id": "rejected_b", "title": "Swap 91 309 for 71 120, which then travels via Bad Bentheim, Schaarbeek and Denderleeuw into the Milan train", "status": "rejected",
+     "why": "Too many extra transports and shunting moves."}
+  ],
+  "cite": "Rulebook §11 and table 8"
+}

@@ -1,0 +1,57 @@
+{
+  "_note": "Lines, train numbers, exchange points and stabling come from the rulebook (§2, §7, tables 0-6). lon/lat are APPROXIMATE city positions for drawing only, not surveyed track positions. 'drawn_via' stops are for drawing the line and are not all named in the rulebook.",
+  "timetable_note": "Rulebook: Paris 475/474 daily; Prague daily except Sat/Sun; Milan three round trips. The 2026-11-21 briefing slide says 475/476 and three times a week on all lines. Which is current is UNKNOWN - not confirmed by ES.",
+  "places": {
+    "BRU": {"name": "Brussels", "lon": 4.35, "lat": 50.85, "country": "BE"},
+    "DDL": {"name": "Denderleeuw", "lon": 4.07, "lat": 50.88, "country": "BE", "role": "technical check, cleaning, logistics; cars shunted out here (Milan + Prague lines)"},
+    "SCH": {"name": "Schaarbeek", "lon": 4.38, "lat": 50.88, "country": "BE", "role": "Prague train stands here on Mondays"},
+    "ANT": {"name": "Antwerp", "lon": 4.42, "lat": 51.22, "country": "BE"},
+    "RTD": {"name": "Rotterdam", "lon": 4.47, "lat": 51.92, "country": "NL"},
+    "AMS": {"name": "Amsterdam", "lon": 4.90, "lat": 52.38, "country": "NL"},
+    "HBTH": {"name": "Bad Bentheim", "lon": 7.16, "lat": 52.30, "country": "DE", "role": "border; Prague-line car exchange"},
+    "OSN": {"name": "Osnabrück", "lon": 8.05, "lat": 52.28, "country": "DE"},
+    "EMSTG": {"name": "Münster (EMSTG)", "lon": 7.63, "lat": 51.96, "country": "DE", "role": "EuroExpress workshop"},
+    "ELEN": {"name": "Lengerich (ELEN)", "lon": 7.86, "lat": 52.19, "country": "DE", "role": "RDC workshop, one access track southbound"},
+    "HAN": {"name": "Hannover", "lon": 9.74, "lat": 52.38, "country": "DE"},
+    "HAM": {"name": "Hamburg", "lon": 10.00, "lat": 53.55, "country": "DE"},
+    "BER": {"name": "Berlin", "lon": 13.40, "lat": 52.52, "country": "DE"},
+    "WUS": {"name": "Wustermark", "lon": 12.95, "lat": 52.55, "country": "DE", "role": "logistics while the Berlin train stands"},
+    "DRE": {"name": "Dresden", "lon": 13.74, "lat": 51.05, "country": "DE"},
+    "PRG": {"name": "Prague (KRC)", "lon": 14.44, "lat": 50.08, "country": "CZ", "role": "stands 12:00-17:30 and all weekend"},
+    "PAR": {"name": "Paris (Le Bourget)", "lon": 2.40, "lat": 48.90, "country": "FR", "role": "very restrictive yard; technical check"},
+    "AAC": {"name": "Aachen", "lon": 6.09, "lat": 50.78, "country": "DE"},
+    "KOL": {"name": "Cologne", "lon": 6.96, "lat": 50.94, "country": "DE"},
+    "KAR": {"name": "Karlsruhe", "lon": 8.40, "lat": 49.01, "country": "DE", "role": "Milan run stops one hour; Crailsheim exchange"},
+    "CRA": {"name": "Crailsheim", "lon": 10.07, "lat": 49.14, "country": "DE", "role": "GFF workshop, reached by separate transport"},
+    "BAS": {"name": "Basel", "lon": 7.59, "lat": 47.56, "country": "CH"},
+    "CHI": {"name": "Chiasso", "lon": 9.03, "lat": 45.83, "country": "CH", "role": "wheel lathe (sometimes)"},
+    "MIL": {"name": "Milan (Certosa)", "lon": 9.19, "lat": 45.46, "country": "IT"}
+  },
+  "lines": {
+    "Prag": {"name": "Brussels – Prague", "outbound": "453", "return": "452", "car_numbers": [1, 29], "staff_car": 15,
+             "countries": ["BE", "NL", "DE", "CZ"], "drawn_via": ["BRU", "ANT", "RTD", "AMS", "HBTH", "OSN", "HAN", "BER", "DRE", "PRG"],
+             "can_change_length_en_route": true, "stabling": ["DDL", "SCH", "PRG"], "exchange": ["HBTH", "EMSTG"],
+             "cite": "table 0; §5; §7"},
+    "Paris": {"name": "Paris – Berlin", "outbound": "475", "return": "474", "car_numbers": [30, 49], "staff_car": 35,
+              "countries": ["FR", "BE", "DE"], "drawn_via": ["PAR", "BRU", "AAC", "EMSTG", "ELEN", "OSN", "HAM", "BER"],
+              "can_change_length_en_route": true, "stabling": ["PAR", "WUS"], "exchange": ["ELEN", "EMSTG"],
+              "cite": "table 0; §5: 475 collects northbound, 474 drops"},
+    "Milan": {"name": "Brussels – Milan", "outbound": "401", "return": "400", "car_numbers": [50, 69], "staff_car": 55,
+              "countries": ["BE", "DE", "CH", "IT"], "drawn_via": ["BRU", "AAC", "KOL", "KAR", "BAS", "CHI", "MIL"],
+              "can_change_length_en_route": false, "stabling": ["DDL", "MIL"], "exchange": ["KAR", "DDL"],
+              "cite": "table 0; §5: on the Milan line this is not possible"}
+  },
+  "workshops": {
+    "RDC": {"place": "ELEN", "cite": "table 6: Lengerich for RDC cars"},
+    "EE": {"place": "EMSTG", "cite": "table 6: Münster for EuroExpress cars"},
+    "Gff": {"place": "CRA", "cite": "table 6: Crailsheim for GFF cars"}
+  },
+  "links": [
+    {"from": "ELEN", "to": "HBTH", "kind": "extra_transport", "cost_key": "bentheim_munster_lengerich", "cite": "§12"},
+    {"from": "EMSTG", "to": "HBTH", "kind": "extra_transport", "cost_key": "bentheim_munster_lengerich", "cite": "§12"},
+    {"from": "CRA", "to": "KAR", "kind": "extra_transport", "cost_key": "karlsruhe_crailsheim", "cite": "§12"},
+    {"from": "DDL", "to": "SCH", "kind": "same_day_transport", "cite": "§2: on Mondays an exchange between Milan and Prague needs a transport on the same day"},
+    {"from": "Prag", "to": "Paris", "kind": "spare_cars", "cite": "§9: spare cars from the Prague line can go to Paris, but not to Italy"},
+    {"from": "Paris", "to": "Milan", "kind": "rdc_via_prague_and_ddl", "cite": "§9: RDC cars come from the Paris train, exchanged onto the Prague line, brought to Denderleeuw, shunted into the Milan train"}
+  ]
+}

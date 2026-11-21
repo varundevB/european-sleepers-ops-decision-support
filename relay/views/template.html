@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>European Sleeper · Operations Decision Support</title>
+<style>
+/* Look after Shaun Doraiyah's Nightdesk console sketch: light ground, ink borders, mono labels,
+   colour only for status and never as the only signal. Runs offline; system fonts as fallback. */
+:root{--ink:#1A0A14;--aub:#40002C;--aub-2:#5A0C40;--ground:#EDEFF3;--panel:#FFFFFF;--rule:rgba(43,27,38,.22);
+--rule-strong:#2B1B26;--muted:#4A3A45;--warn:#C81E1E;--warn-tint:#FBE9E9;--caut:#F2A900;--caut-tint:#FFF6DB;
+--adv:#475569;--adv-tint:#E2E8F0;--go:#15803D;--go-tint:#E7F4EC;--on-aub:#F3E6EF;--on-aub-dim:#D9BFD0;
+--hatch:repeating-linear-gradient(135deg,#E4E6EB 0 6px,#F7F8FA 6px 12px);
+--mono:"Source Code Pro",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+--sans:"Source Sans 3","Source Sans Pro",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font:15px/1.35 var(--sans)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid #0B57D0;outline-offset:2px}
+.lab{font:700 11px var(--mono);letter-spacing:.09em;text-transform:uppercase}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)}
+
+/* header */
+.hdr{background:var(--aub);color:var(--on-aub);display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;
+padding:9px 18px;border-bottom:4px solid var(--ink)}
+.brand b{display:block;font:800 15px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.brand span{display:block;font-size:13px;color:var(--on-aub-dim);margin-top:2px}
+.clock{text-align:center}
+.clock .t{font:800 40px/1 var(--mono);letter-spacing:.02em}
+.clock .d{font:700 11px var(--mono);letter-spacing:.09em;color:var(--on-aub-dim);margin-top:3px;text-transform:uppercase}
+.next{justify-self:end;border:2px solid var(--on-aub);padding:6px 12px;border-radius:2px;text-align:right;min-width:270px}
+.next .k{font:700 11px var(--mono);letter-spacing:.09em;color:var(--on-aub-dim);text-transform:uppercase}
+.next .v{font:800 26px/1.1 var(--mono)}
+.next.late{background:var(--warn);border-color:#fff}
+.next.done{background:var(--aub-2)}
+.replay{background:var(--ink);color:#fff;font:700 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;
+padding:4px 18px;display:flex;justify-content:space-between;gap:12px}
+
+/* alarm bar */
+.master{display:flex;align-items:center;gap:14px;padding:8px 18px;background:var(--warn);color:#fff;border-bottom:2px solid var(--ink)}
+.master.acked{background:var(--panel);color:var(--ink)}
+.master .tier{font:800 13px var(--mono);letter-spacing:.08em;white-space:nowrap}
+.master .msg{flex:1;font-size:16px;font-weight:600}
+.master .src{font:600 11px var(--mono);color:inherit;opacity:.9}
+.master button{background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:2px;font:800 12px var(--mono);
+letter-spacing:.08em;padding:5px 12px}
+@keyframes blink{50%{background:#8E1414}}
+.master:not(.acked){animation:blink 1.6s steps(1) infinite}
+
+/* workflow strip */
+.flow{display:flex;gap:0;padding:0 18px;background:#F4F5F8;border-bottom:2px solid var(--ink)}
+.flow button{flex:1;background:none;border:0;border-right:1px solid var(--rule);padding:7px 10px;text-align:left;
+font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.flow button:last-child{border-right:0}
+.flow button b{display:inline-block;width:20px;height:20px;line-height:17px;text-align:center;border:2px solid currentColor;
+border-radius:50%;margin-right:8px}
+.flow button.on{background:var(--ink);color:#fff}
+.flow button.past{color:var(--ink)}
+
+/* fleet strip */
+.fleet{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;padding:10px 18px 0}
+.fc{background:var(--panel);border:2px solid var(--ink);border-left-width:10px;border-radius:2px;padding:6px 10px;min-width:0}
+.fc.w{border-left-color:var(--warn)}.fc.c{border-left-color:var(--caut)}.fc.a{border-left-color:var(--adv)}.fc.n{border-left-color:var(--go)}
+.fc .no{font:800 24px/1 var(--mono)}
+.fc .rt{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc .tm{font:600 12px var(--mono);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc .top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.st{font:800 11px var(--mono);letter-spacing:.06em;padding:2px 6px;border-radius:2px;border:1.5px solid var(--ink);white-space:nowrap}
+.st.w{background:var(--warn);color:#fff}.st.c{background:var(--caut)}.st.a{background:var(--adv-tint)}.st.n{background:var(--go-tint)}
+.st.x{background:var(--hatch);border-style:dashed}
+
+/* main grid */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px 18px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel{background:var(--panel);border:2px solid var(--ink);border-radius:2px;min-width:0}
+.panel>header{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#F4F5F8;
+border-bottom:2px solid var(--ink);padding:5px 10px}
+.panel>header h2{margin:0;font:800 12px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.panel .body{padding:10px}
+.more{background:none;border:0;border-bottom:2px solid var(--ink);padding:0;font:800 11px var(--mono);letter-spacing:.08em;
+text-transform:uppercase;color:var(--ink)}
+.more:hover{background:var(--caut-tint)}
+.hl{box-shadow:0 0 0 4px #0B57D0}
+
+.trow{display:grid;grid-template-columns:minmax(0,auto) minmax(420px,1fr)}
+.train{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:8px 14px;border-right:2px solid var(--ink)}
+.train .no{font:800 50px/1 var(--mono)}
+.train .rt{font-size:19px;font-weight:700}
+.train .sub{font-size:13px;color:var(--muted)}
+.tele{display:grid;grid-template-columns:repeat(3,1fr)}
+.tele div{padding:7px 12px;border-right:1px solid var(--rule)}
+.tele div:last-child{border-right:0}
+.tele .v{font:800 24px/1.1 var(--mono)}
+.tele .crit .v{color:var(--warn)}
+.tele .s{font:600 11px var(--mono);color:var(--muted)}
+
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:10px}
+.three{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}.three>.dec{order:-1}.three>.sec-affected{order:1}
+.three .board{grid-template-columns:1fr 1fr}.three .cell:nth-child(3n){border-right:1px solid var(--rule)}.three .cell:nth-child(2n){border-right:0}
+.dec{border-width:3px}.dec>header{background:var(--ink)}.dec>header h2{color:#fff;font-size:14px}.dec>header .lab{color:#fff}
+.dec .opt-r{padding:9px 14px;gap:3px 12px}.dec .opt-r .ttl{font-size:18px}.dec .opt-r .eur{font-size:24px}.dec .opt-r .meta{font-size:12.5px}
+.dec .opt-r input{width:20px;height:20px}.dec .opt-r.off{padding:4px 14px}.dec .opt-r.off .ttl{font-size:14px}.dec .opt-r.off .eur{font-size:15px}.dec .opt-r.off .meta{font-size:11px}
+.dec .opt-r{padding:7px 14px}.dec #call{display:grid;grid-template-columns:minmax(0,1fr) 250px}.dec #call>*{grid-column:1 / 3}.dec #call>.why{grid-column:1;border-bottom:0}.dec #call>.armrow{grid-column:2;align-self:end;flex-direction:column;align-items:stretch}.dec #call>.hint{display:none}
+.dec .why{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;align-items:center}.dec .why textarea{order:3;grid-column:1 / 3}.dec .why .quick{margin-top:0}
+.train .no{font-size:40px}.tele div{padding:4px 12px}.tele .v{font-size:21px}.dec .saves{font-size:13px}.dec .arm{font-size:17px;padding:13px}.dec .why textarea{font-size:15px}
+#map{display:block;width:100%;height:270px}
+.cons{display:flex;gap:4px;padding:8px 10px;overflow-x:auto}
+.cc{flex:1 1 0;min-width:84px;border:2px solid var(--ink);border-radius:2px;padding:4px 6px;background:var(--panel);border-top-width:7px}
+.cc .n{font:800 14px var(--mono);white-space:nowrap}.cc .t{font:600 10.5px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cc .p{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc .f{font:800 10px var(--mono);letter-spacing:.04em;margin-top:2px;min-height:12px}
+.cc.w{border-color:var(--warn);background:#FDECEC}.cc.w .f{color:var(--warn)}.cc.c{border-top-color:var(--caut)}.cc.u{border-style:dashed}
+.cc.out{opacity:.55}.cc.out .n{text-decoration:line-through}
+.saves{font:800 11px var(--mono);color:var(--go)}
+#td{display:block;width:100%;height:300px}
+#td text{font:700 10.5px var(--mono);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+#rules{border-top:2px solid var(--ink)}
+.lbl-t{font:600 12px var(--sans);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.tag-t{font:800 11px var(--mono);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(3.2);opacity:0}}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 10px;border-top:1px solid var(--rule);font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid var(--ink);vertical-align:middle;margin-right:5px}
+
+.board{display:grid;grid-template-columns:repeat(3,1fr)}
+.cell{padding:8px 10px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);background:none;border-top:0;border-left:0;
+text-align:left;color:var(--ink);min-width:0;display:flex;flex-direction:column;gap:4px}
+.cell:nth-child(3n){border-right:0}
+.cell:hover{background:#F7F8FA}
+.cell .net{font:800 11px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.verdict{font:800 13px var(--mono);letter-spacing:.04em;padding:3px 7px;border:2px solid var(--ink);border-radius:2px;align-self:flex-start}
+.v-go{background:var(--go);color:#fff}.v-no{background:var(--warn);color:#fff}.v-ca{background:var(--caut)}
+.v-na{background:var(--hatch);border-style:dashed}
+.cell .note{font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.evl{font:600 10.5px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tally{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 10px;border-top:2px solid var(--ink);
+font:700 12px var(--mono)}
+.callout{font:800 12px var(--mono);letter-spacing:.06em;padding:4px 8px;border:2px solid var(--ink);border-radius:2px;background:var(--caut-tint)}
+.callout.done{background:var(--go);color:#fff}
+
+/* planner's call */
+.opt-r{display:grid;grid-template-columns:auto 1fr auto;gap:1px 8px;align-items:start;padding:5px 10px;border-bottom:1px solid var(--rule)}
+.opt-r.sel{background:var(--caut-tint);box-shadow:inset 5px 0 0 var(--ink)}
+.opt-r.off{background:#F7F8FA;color:var(--muted)}
+.opt-r input{margin-top:3px;accent-color:var(--ink);width:16px;height:16px}
+.opt-r .ttl{font-weight:600;font-size:14px;line-height:1.25}
+.opt-r .eur{font:800 16px var(--mono);text-align:right;white-space:nowrap}
+.opt-r .meta{grid-column:2 / 4;font:600 11px var(--mono);color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tagb{white-space:nowrap;align-self:start;font:800 10px var(--mono);letter-spacing:.06em;padding:1px 5px;border:1.5px solid var(--ink);border-radius:2px;color:var(--ink)}
+.tagb.g{background:var(--go-tint)}.tagb.c{background:var(--caut)}.tagb.w{background:var(--warn);color:#fff}.tagb.x{background:var(--hatch);border-style:dashed}
+.why{padding:8px 10px;border-bottom:1px solid var(--rule)}
+.why textarea{width:100%;height:32px;resize:none;border:2px solid var(--ink);border-radius:2px;padding:5px 7px;font:14px var(--sans)}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.quick button{background:#fff;border:1.5px solid var(--ink);border-radius:2px;font:600 12px var(--sans);padding:2px 8px}
+.armrow{display:flex;gap:8px;padding:9px 10px;align-items:center}
+.arm{flex:1;background:var(--ink);color:#fff;border:2px solid var(--ink);border-radius:2px;font:800 14px var(--mono);letter-spacing:.1em;padding:9px}
+.arm.armed{background:var(--warn);border-color:var(--ink)}
+.arm:disabled{background:#B8BCC6;border-color:#B8BCC6;cursor:default}
+.ghost{background:#fff;border:2px solid var(--ink);border-radius:2px;font:800 12px var(--mono);letter-spacing:.06em;padding:8px 10px}
+.hint{font-size:12px;color:var(--muted);padding:0 10px 8px}
+.rec{margin:10px;border:3px solid var(--go);border-radius:2px;padding:8px 10px;background:var(--go-tint)}
+.rec .stamp{font:800 18px var(--mono);letter-spacing:.14em;color:var(--go)}
+.rec dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0;font-size:13px}
+.rec dt{font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rec dd{margin:0;overflow-wrap:anywhere}
+.sent{padding:0 10px 10px}
+.confcell{display:flex;gap:6px;align-items:start;flex-wrap:wrap;justify-content:flex-end}
+button.mini{font:800 10px var(--mono);letter-spacing:.06em;padding:1px 6px;border:1.5px solid var(--ink);border-radius:2px;background:var(--ink);color:#fff;cursor:pointer}
+.outst{font-size:12px;padding:6px 0 0;border-top:1px solid var(--rule)}
+.sent .m{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;padding:5px 0;border-top:1px solid var(--rule);font-size:13px}
+.rule{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:13px}
+.rule .id{font:800 11px var(--mono);letter-spacing:.06em;margin-right:6px}
+.rule q{display:block;color:var(--muted);margin-top:2px;font-size:12px}
+.norule{margin:10px;padding:8px 10px;background:var(--hatch);border:2px dashed var(--ink);font:700 12px var(--mono)}
+.log{height:178px;overflow:auto}
+#rules{max-height:178px;overflow:auto}
+.log .r{display:grid;grid-template-columns:62px 74px 1fr;gap:8px;padding:4px 10px;border-bottom:1px solid var(--rule);font-size:13px}
+.log .r.new{background:var(--caut-tint)}
+.log .tm{font:700 12px var(--mono)}
+.log .kd{font:800 10.5px var(--mono);letter-spacing:.06em;padding-top:1px}
+.foot{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;padding:8px 18px;border-top:2px solid var(--ink);
+background:var(--panel);font:600 11.5px var(--mono)}
+.foot .ok{color:var(--go);font-weight:800}
+.foot button{background:#fff;border:2px solid var(--ink);border-radius:2px;font:800 11px var(--mono);padding:3px 8px}
+
+/* detail pages */
+#page{display:none;position:fixed;inset:0;background:var(--ground);overflow:auto;z-index:10}
+#page.on{display:block}
+.pbar{position:sticky;top:0;background:var(--aub);color:var(--on-aub);display:flex;gap:16px;align-items:center;padding:10px 18px;
+border-bottom:4px solid var(--ink);z-index:1}
+.pbar button{background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:2px;font:800 12px var(--mono);letter-spacing:.08em;padding:6px 12px}
+.pbar h1{margin:0;font:800 16px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.pbar nav{margin-left:auto;display:flex;gap:6px}
+.pbody{max-width:1180px;margin:0 auto;padding:16px 18px 40px;display:flex;flex-direction:column;gap:12px}
+.pbody h2{font-size:26px;margin:4px 0 0}
+.pbody .lede{font-size:17px;margin:0;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font:800 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;text-align:left;background:#F4F5F8;border-bottom:2px solid var(--ink);padding:5px 10px}
+td{padding:5px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+td.src,span.src{font:600 12px var(--mono);color:var(--muted)}
+.fact{padding:6px 10px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr minmax(180px,34%);gap:14px;font-size:14px}
+.fact .src{font:600 12px var(--mono);color:var(--muted)}
+pre{margin:0;padding:10px;font:13px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big{font:800 30px/1.15 var(--sans)}
+@media (max-width:1100px){.wrap{grid-template-columns:1fr}.two,.three,.g2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="page" role="dialog" aria-modal="true"></div>
+<script id="data" type="application/json">/*__RELAY_DATA__*/</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const NS = "http://www.w3.org/2000/svg";
+const AXES = [["rules","Rules"],["products","Products"],["partners","Partners"],["infrastructure","Infrastructure"],["time","Time"],["money","Money"]];
+const FLOW = [["Incident","sec-receive"],["Impact","sec-affected"],["Options","sec-actions"],["Decision","sec-decide"],["Record","sec-proof"]];
+const NET = D.network || {places:{},lines:{}}, PL = NET.places || {}, LINES = NET.lines || {};
+const LIVE = D.live || null, INC = D.incident || {};
+const LABELS = {BRU:{dx:8,dy:16,a:"start"}, DDL:{dx:-8,dy:-7,a:"end"}, HBTH:{dx:-8,dy:-8,a:"end"}, ELEN:{dx:9,dy:-7,a:"start"},
+  EMSTG:{dx:-8,dy:15,a:"end"}, BER:{dx:8,dy:-7,a:"start"}, PRG:{dx:0,dy:18,a:"middle"}, PAR:{dx:0,dy:18,a:"middle"},
+  KAR:{dx:-9,dy:4,a:"end"}, CRA:{dx:9,dy:4,a:"start"}, MIL:{dx:9,dy:4,a:"start"}, AMS:{dx:-8,dy:-6,a:"end"}};
+const S = {sel:D.chosen, recorded:null, conf:{}, armed:0, armTimer:null, flow:0, acked:false, replay:false, departed:null, log:[]};
+
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(props||{})){
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat(3)){ if (c == null || c === false) continue; e.append(c.nodeType ? c : String(c)); }
+  return e;
+}
+function s(tag, attrs, ...kids){
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs||{})){ if (v != null) e.setAttribute(k, v); }
+  for (const c of kids.flat()){ if (c == null) continue; e.append(c.nodeType ? c : String(c)); }
+  return e;
+}
+const arr = x => Array.isArray(x) ? x : [];
+const eur = n => n == null ? "not priced" : "€" + Number(n).toLocaleString("en-GB");
+const shortName = k => PL[k] ? String(PL[k].name).replace(/\s*\(.*\)\s*$/, "") : (k || "");
+const optById = id => arr(D.options).find(o => o.id === id);
+const pad = n => String(n).padStart(2, "0");
+/* A fact reads "statement — source". Split at the last dash. */
+function splitFact(f){ const i = String(f).lastIndexOf(" — "); return i < 0 ? [String(f), ""] : [f.slice(0, i), f.slice(i + 3)]; }
+function panel(title, right, ...kids){ return h("section", {class:"panel"}, h("header", {}, h("h2", {text:title}), right), kids); }
+function tidy(t){ return String(t || "").replace(/(\d+) ([\w ]+?)\(s\)/g, (m, n, w) => n + " " + w + (n === "1" ? "" : "s")).replace(/^In train, not commercial loses a car$/, "1 car out of the train").replace(/ loses a car$/, " · 1 car lost").replace(/\b1 (shunting moves|moves|transports)\b/g, (m, w) => "1 " + w.slice(0, -1)).replace(/^clear · /, ""); }
+const SHORT = {run_short:c => "Run short · remove " + c, workshop_transport:c => "Run short · " + c + " to workshop by transport", p_lend:() => "Borrow a car from the Paris train",
+  p_preposition:() => "Pre-position a reserve car at Denderleeuw", detour:c => "Detour via workshop · drop " + c};
+function ttl(o){ return o ? (SHORT[o.id] && INC.car ? SHORT[o.id](INC.car) : String(o.title || "").replace(/^PROPOSAL:\s*/, "")) : ""; }
+function split(o){ return o.eur == null ? "" : o.eur_assumed ? "ES rates " + eur(o.eur_table) + " · est. " + eur(o.eur_assumed) : "ES rates " + eur(o.eur_table); }
+function more(label, hash){ return h("button", {class:"more", text:label + " →", onclick:() => { location.hash = hash; }}); }
+
+/* ---------- scenario clock ---------- */
+function tms(t, base){ /* "17:17:00" on the scenario date -> ms; small hours after an evening start roll to the next day */
+  if (!t) return null;
+  const [H, M, Sx] = t.split(":").map(Number);
+  let ms = Date.UTC(...LIVE.date.split("-").map((v,i) => i === 1 ? v - 1 : +v), H, M, Sx || 0);
+  if (base != null && ms < base - 6*3600e3) ms += 86400e3;
+  return ms;
+}
+const fmtT = ms => { const d = new Date(ms); return pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds()); };
+const fmtHM = ms => fmtT(ms).slice(0, 5);
+const mins = sec => sec == null ? null : Math.trunc(sec / 60);
+const PLAN_DEP = LIVE ? tms(LIVE.planned_dep) : null;
+const REAL_DEP = LIVE ? tms(LIVE.points[0].real_dep, PLAN_DEP) : null;
+let sim = LIVE ? PLAN_DEP - 25*60e3 : null, rate = 1, lastTick = performance.now(), queue = [];
+
+/* Lines the incident sits on: the incident's own line, else the lines of the trains the cascade names. */
+function mineLines(){
+  if (INC.line) return new Set([INC.line]);
+  const t = affectedTrains(), out = new Set();
+  for (const [k, L] of Object.entries(LINES)) if (t.has(L.outbound) || t.has(L.return)) out.add(k);
+  return out;
+}
+function affectedTrains(){
+  const t = new Set(arr(D.impact.nodes).filter(n => n.kind === "train").map(n => n.id.replace("train:", "")));
+  for (const o of arr(D.options)) if (o.id === D.chosen) for (const st of arr(o.steps)) if (st.train) t.add(st.train);
+  return t;
+}
+function touchedLines(){ return new Set(arr(D.impact.nodes).filter(n => n.kind === "line").map(n => n.id.replace("line:", ""))); }
+function incidentPlace(){
+  if (INC.place && PL[INC.place]) return INC.place;
+  const o = optById(D.chosen); const st = arr(o && o.steps).find(x => PL[x.at]); return st ? st.at : "";
+}
+
+/* ---------- event log ---------- */
+function addLog(tm, kind, text, isNew){
+  S.log.unshift({tm, kind, text, isNew: isNew !== false});
+  const el = document.getElementById("log"); if (el) renderLog(el);
+}
+function renderLog(el){
+  el.replaceChildren(...S.log.map(r => h("div", {class:"r" + (r.isNew ? " new" : "")},
+    h("span", {class:"tm", text:r.tm}), h("span", {class:"kd", text:r.kind}), h("span", {text:r.text}))));
+  S.log.forEach(r => { r.isNew = false; });
+}
+function seedLog(){
+  if (LIVE){
+    const day = LIVE.date, prev = arr(LIVE.ops).find(o => o.line === LIVE.line && o.date < day);
+    const back = LIVE.fleet[NET.lines[LIVE.line] && NET.lines[LIVE.line].return];
+    if (prev && prev.note) addLog(prev.date.slice(5), "ES LOG", "“" + prev.note + "” (" + prev.cite.split(" · ")[1] + ")", false);
+    if (back) addLog(back.last.real_arr.slice(0, 5).padStart(5, "0"), "INFRABEL", "Train " + NET.lines[LIVE.line].return + " reaches " + back.last.name +
+      ", planned " + back.last.plan_arr.slice(0, 5) + " (+" + mins(back.last.delay_arr_s) + " min)", false);
+  }
+  addLog(LIVE ? fmtHM(sim) : "—", "CASE", "Car " + (INC.car || "") + " · " + String(INC.kind || "").replace(/_/g, " ") + " · " + (INC.cite || "").split(" · ").pop());
+}
+
+/* ---------- map ---------- */
+function makeProj(w, ht){
+  const ok = k => PL[k] && typeof PL[k].lon === "number" && typeof PL[k].lat === "number";
+  const all = Object.keys(PL).filter(ok);
+  if (!all.length) return () => null;
+  const lat0 = all.reduce((a,k) => a + PL[k].lat, 0) / all.length, kx = Math.cos(lat0 * Math.PI / 180);
+  const xs = all.map(k => PL[k].lon * kx), ys = all.map(k => -PL[k].lat);
+  const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
+  const p = {l:58, r:58, t:22, b:26};
+  const sc = Math.min((w-p.l-p.r)/((maxx-minx)||1), (ht-p.t-p.b)/((maxy-miny)||1));
+  const ox = p.l + ((w-p.l-p.r) - (maxx-minx)*sc)/2, oy = p.t + ((ht-p.t-p.b) - (maxy-miny)*sc)/2;
+  return key => ok(key) ? [ox + (PL[key].lon*kx - minx)*sc, oy + (-PL[key].lat - miny)*sc] : null;
+}
+function drawMap(){
+  const svg = document.getElementById("map"); if (!svg) return;
+  const box = svg.getBoundingClientRect(), w = Math.max(260, box.width), ht = Math.max(200, box.height);
+  svg.setAttribute("viewBox", `0 0 ${w} ${ht}`); svg.replaceChildren();
+  const proj = makeProj(w, ht), touched = touchedLines(), mine = mineLines(), opt = optById(S.sel);
+  svg.append(s("defs", {}, s("marker", {id:"ah", viewBox:"0 0 10 10", refX:8, refY:5, markerWidth:7, markerHeight:7, orient:"auto-start-reverse"},
+    s("path", {d:"M0 0L10 5L0 10z", fill:"#15803D"}))));
+  for (const k of Object.keys(LINES)){
+    const pts = arr(LINES[k].drawn_via).map(proj).filter(Boolean); if (pts.length < 2) continue;
+    const on = mine.has(k), tc = touched.has(k);
+    svg.append(s("polyline", {points:pts.map(p => p.join(",")).join(" "), fill:"none", stroke:on ? "#1A0A14" : tc ? "#4A3A45" : "#A9AFBC",
+      "stroke-width":on ? 5 : 3, "stroke-dasharray":on ? null : tc ? "9 5" : null, "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  }
+  const ws = {}; for (const [owner, v] of Object.entries(NET.workshops || {})) if (v && v.place) ws[v.place] = owner;
+  for (const k of Object.keys(PL)){ const p = proj(k); if (!p) continue;
+    if (ws[k]) svg.append(s("rect", {x:p[0]-5, y:p[1]-5, width:10, height:10, fill:"#fff", stroke:"#1A0A14", "stroke-width":2.5}));
+    else svg.append(s("circle", {cx:p[0], cy:p[1], r:3, fill:"#fff", stroke:"#1A0A14", "stroke-width":1.5})); }
+  /* cascade: places reached, ringed in amber with the hop number */
+  const hopOf = {};
+  for (const e of arr(D.impact.edges)){ const n = arr(D.impact.nodes).find(x => x.id === e.dst); const pl = n && (n.place || (n.kind === "place" ? n.id.replace("place:", "") : ""));
+    if (pl && PL[pl]) hopOf[pl] = Math.min(hopOf[pl] || 99, e.hop || 1); }
+  for (const [pl, hop] of Object.entries(hopOf)){ const p = proj(pl); if (!p) continue;
+    svg.append(s("circle", {cx:p[0], cy:p[1], r:11, fill:"none", stroke:"#F2A900", "stroke-width":4})); }
+  /* the selected action: where each car goes */
+  const used = new Set();
+  if (opt){ const by = {};
+    for (const st of arr(opt.steps)) if (st.car && PL[st.at]){ (by[st.car] = by[st.car] || []); if (by[st.car].at(-1) !== st.at) by[st.car].push(st.at); used.add(st.at); }
+    const seen = new Set();
+    for (const seq of Object.values(by)) for (let i = 1; i < seq.length; i++){
+      const key = seq[i-1] + ">" + seq[i]; if (seen.has(key)) continue; seen.add(key);
+      const a = proj(seq[i-1]), b = proj(seq[i]); if (!a || !b) continue;
+      const mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2 - 16;
+      svg.append(s("path", {d:`M${a[0]} ${a[1]} Q${mx} ${my} ${b[0]} ${b[1]}`, fill:"none", stroke:"#15803D", "stroke-width":3, "stroke-dasharray":"7 4", "marker-end":"url(#ah)"}));
+    }
+    for (const pl of used){ const p = proj(pl); if (p) svg.append(s("circle", {cx:p[0], cy:p[1], r:6, fill:"#15803D", stroke:"#fff", "stroke-width":2})); }
+  }
+  const ip = incidentPlace(), p0 = ip && proj(ip);
+  if (p0){ svg.append(s("circle", {cx:p0[0], cy:p0[1], r:9, fill:"none", stroke:"#C81E1E", "stroke-width":3, class:"pulse"}));
+    svg.append(s("path", {d:`M${p0[0]} ${p0[1]-30}l9 16h-18z`, fill:"#C81E1E", stroke:"#1A0A14", "stroke-width":1.5})); }
+  const show = new Set([...Object.keys(hopOf), ...used, ip, ...Object.values(LINES).flatMap(L => [L.drawn_via[0], L.drawn_via.at(-1)])]);
+  for (const k of show){ const p = k && proj(k); if (!p) continue; const L = LABELS[k] || {dx:8, dy:-7, a:"start"};
+    svg.append(s("text", {x:p[0]+L.dx, y:p[1]+L.dy, "text-anchor":L.a, class:"lbl-t"}, shortName(k))); }
+}
+
+/* ---------- six checks ---------- */
+function verdict(opt, key){
+  const ax = (opt.axes || {})[key] || {}, hd = String(ax.headline || "");
+  if (key === "rules"){
+    if (opt.refused) return ["v-no", "✕ BLOCKED"];
+    if (arr(opt.needs_signoff).length) return ["v-ca", "■ SIGN-OFF"];
+  }
+  if (/UNKNOWN|not priced/.test(hd)) return ["v-na", "? NO DATA"];
+  if (ax.score == null) return ["v-na", "? NO DATA"];
+  return ax.score >= 80 ? ["v-go", "✓ OK"] : ax.score >= 50 ? ["v-ca", "■ CAUTION"] : ["v-no", "▲ IMPACT"];
+}
+function renderBoard(){
+  const el = document.getElementById("board"); if (!el) return;
+  const opt = optById(S.sel); const count = {};
+  const cells = AXES.map(([k, name]) => {
+    const ax = (opt.axes || {})[k] || {}, [cls, word] = verdict(opt, k), [txt, src] = splitFact(arr(ax.facts)[0] || "");
+    count[word] = (count[word] || 0) + 1;
+    return h("button", {class:"cell", onclick:() => { location.hash = "action/" + opt.id; }},
+      h("span", {class:"net", text:name}), h("span", {class:"verdict " + cls, text:word}),
+      h("span", {class:"note", text:tidy(ax.headline || txt)}), h("span", {class:"evl", text:"SRC " + (src || "—")}));
+  });
+  const tally = Object.entries(count).map(([k, n]) => n + " " + k.replace(/^\S+\s/, "")).join(" · ");
+  el.replaceChildren(h("div", {class:"board"}, cells),
+    h("div", {class:"tally"}, h("span", {text:tally}),
+      h("span", {class:"callout" + (S.recorded ? " done" : ""), text:S.recorded ? "DECISION RECORDED" : "DECISION PENDING"})));
+  document.getElementById("board-ttl").textContent = "Checks · " + ttl(opt);
+}
+
+/* ---------- planner's call ---------- */
+function optOrder(){ const o = arr(D.options); return [...o.filter(x => x.rank > 0).sort((a,b) => a.rank - b.rank), ...o.filter(x => x.proposed), ...o.filter(x => x.refused)]; }
+function renderCall(){
+  const el = document.getElementById("call"); if (!el) return;
+  const priced = arr(D.options).filter(x => !x.refused && !x.proposed && x.eur != null), dear = priced.length > 1 ? Math.max(...priced.map(x => x.eur)) : null;
+  const rows = optOrder().map(o => {
+    const off = o.refused || o.proposed, dis = off || !!S.recorded;
+    const tags = [o.id === D.chosen ? h("span", {class:"tagb g", text:"RANK 1"}) : null,
+      o.refused ? h("span", {class:"tagb w", text:"BLOCKED"}) : null,
+      o.proposed ? h("span", {class:"tagb x", text:"PROPOSAL"}) : null,
+      arr(o.needs_signoff).length ? h("span", {class:"tagb c", text:"NEEDS SIGN-OFF " + o.needs_signoff.length}) : null];
+    return h("label", {class:"opt-r" + (o.id === S.sel ? " sel" : "") + (off ? " off" : "")},
+      h("input", {type:"radio", name:"opt", value:o.id, checked:o.id === S.sel, disabled:dis && o.id !== S.sel, onchange:() => select(o.id)}),
+      h("span", {class:"ttl", text:ttl(o)}),
+      h("span", {class:"eur", text:o.eur == null ? "—" : eur(o.eur)}),
+      h("span", {class:"meta"}, tags, o.eur != null ? h("span", {text:split(o)}) : h("span", {text:"not priced"}),
+        off ? null : h("span", {text:tidy((o.shunting_moves || 0) + " moves") + " · +" + (o.delay_min || 0) + " min"}),
+        !off && dear != null && o.eur != null && o.eur < dear ? h("span", {class:"saves", text:"SAVES " + eur(dear - o.eur) + " EST."}) : null,
+        !off && o.co2 && o.co2.kg != null ? h("span", {title:o.co2.note || "", text:Math.round(o.co2.kg).toLocaleString("en") + " kg CO₂ est."}) : null, more("Detail", "action/" + o.id)));
+  });
+  const kids = [h("div", {}, rows)];
+  if (S.recorded){
+    const r = S.recorded, docs = ((D.documents.by_option || {})[r.option]) || {};
+    kids.push(h("div", {class:"rec"}, h("div", {class:"stamp", text:"✓ RECORDED"}),
+      h("dl", {}, h("dt", {text:"Action"}), h("dd", {text:ttl(optById(r.option))}), h("dt", {text:"By"}), h("dd", {text:r.user}),
+        h("dt", {text:"Why"}), h("dd", {text:r.reason || "no reason given"}), h("dt", {text:"At"}), h("dd", {class:"mono", text:r.at}),
+        h("dt", {text:"Seal"}), h("dd", {class:"mono", text:r.seal}))));
+    kids.push(h("div", {class:"sent"}, h("div", {class:"lab", text:"Messages"}),
+      docs.error ? h("div", {class:"norule", text:"NO DRAFT · " + docs.error}) : [
+        h("div", {class:"m"}, h("span", {}, h("b", {text:"Task order (German)"}), " · " + String(docs.task_order_de || "").split("\n").filter(x => x.startsWith("- ")).length + " lines"), more("Open", "documents")),
+        arr(docs.messages).map(m => h("div", {class:"m"}, h("span", {}, h("b", {text:m.to}), " · " + m.subject), confTag(m.to, true))),
+        arr(docs.messages).length ? h("div", {class:"outst", text:outstanding(docs)}) : null],
+      h("div", {style:"display:flex;gap:8px;margin-top:6px"},
+        LIVE && !S.replay ? h("button", {class:"arm", id:"replaybtn", text:"▶ RUN REPLAY", onclick:startReplay}) : null,
+        h("button", {class:"ghost", text:"REOPEN", onclick:reopen}))));
+  } else {
+    kids.push(h("div", {class:"why"}, h("div", {class:"lab", text:"Reason"}),
+      h("textarea", {id:"why", placeholder:"Reason for decision"}),
+      h("div", {class:"quick"}, ["Lowest cost", "Fewest moves", "Least passenger impact"].map(t =>
+        h("button", {text:t, onclick:() => { document.getElementById("why").value = t; }})))));
+    kids.push(h("div", {class:"armrow"}, h("button", {class:"arm", id:"armbtn", text:"RECORD DECISION", onclick:arm}),
+      h("button", {class:"ghost", id:"disarm", text:"CANCEL", style:"display:none", onclick:disarm})));
+    kids.push(h("div", {class:"hint", text:"Confirm within 10 s."}));
+  }
+  el.replaceChildren(...kids);
+}
+function select(id){ if (S.recorded) return; S.sel = id; disarm(); renderCall(); renderBoard(); renderRules(); drawMap(); renderConsist(); }
+function arm(){
+  const b = document.getElementById("armbtn");
+  if (S.armed){ confirmCall(); return; }
+  S.armed = 10; b.classList.add("armed"); document.getElementById("disarm").style.display = "";
+  const tick = () => { if (!S.armed) return; b.textContent = "CONFIRM · " + S.armed + " s"; if (--S.armed < 0){ disarm(); addLog(nowLabel(), "CALL", "Not confirmed within 10 s. Nothing recorded."); } };
+  tick(); S.armTimer = setInterval(tick, 1000);
+}
+function disarm(){ clearInterval(S.armTimer); S.armed = 0; const b = document.getElementById("armbtn");
+  if (b){ b.classList.remove("armed"); b.textContent = "RECORD DECISION"; const d = document.getElementById("disarm"); if (d) d.style.display = "none"; } }
+function nowLabel(){ return LIVE ? fmtHM(sim) : new Date().toTimeString().slice(0, 5); }
+async function seal(rec){
+  const prev = (D.documents.audit || {}).hash || "";
+  try {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(prev + JSON.stringify(rec)));
+    return "sha256 " + [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 24) + "… chained after " + prev.slice(0, 10) + "…";
+  } catch (e) { return "not sealed in this browser; the command-line run writes the sealed entry"; }
+}
+async function confirmCall(){
+  clearInterval(S.armTimer); S.armed = 0;
+  const reason = (document.getElementById("why") || {}).value || "";
+  const rec = {incident:INC.id, option:S.sel, reason, user:D.user || "planner", at:LIVE ? LIVE.date + " " + fmtT(sim) + "" : new Date().toISOString().slice(0, 19).replace("T", " ")};
+  rec.seal = await seal(rec); S.recorded = rec;
+  const left = LIVE ? Math.round((PLAN_DEP - sim) / 60e3) : null;
+  addLog(nowLabel(), "DECISION", ttl(optById(S.sel)) + (left != null ? (left >= 0 ? " · T-" + left + " min" : " · T+" + (-left) + " min") : ""));
+  addLog(nowLabel(), "DRAFTED", "Task order + " + arr(((D.documents.by_option || {})[S.sel] || {}).messages).length + " messages drafted · 0 confirmed");
+  setFlow(3, true); renderCall(); renderBoard(); renderFoot();
+}
+function confTag(to, withBtn){
+  const c = S.conf[to];
+  if (c) return h("span", {class:"tagb g", text:"✓ CONFIRMED " + c.at + " · MANUAL"});
+  return h("span", {class:"confcell"}, h("span", {class:"tagb x", text:"DRAFT"}),
+    withBtn ? h("button", {class:"mini", text:"MARK CONFIRMED", onclick:() => markConfirmed(to)}) : null);
+}
+function outstanding(docs){
+  const all = arr(docs.messages).map(m => m.to), open = all.filter(t => !S.conf[t]);
+  return (all.length - open.length) + "/" + all.length + " confirmed" + (open.length ? " · open: " + open.join(", ") : "");
+}
+function markConfirmed(to){
+  if (!S.recorded || S.conf[to]) return;
+  S.conf[to] = {at:nowLabel(), by:S.recorded.user};
+  addLog(nowLabel(), "CONFIRMED", to + " confirmed · manual entry · " + S.recorded.user);
+  renderCall(); if (location.hash) route();
+}
+function reopen(){ addLog(nowLabel(), "REOPEN", "Decision reopened" + (Object.keys(S.conf).length ? " · confirmations cleared" : "")); S.conf = {}; S.recorded = null; renderCall(); renderBoard(); renderFoot(); }
+
+function renderRules(){
+  const el = document.getElementById("rules"); if (!el) return;
+  const opt = optById(S.sel), out = [];
+  for (const f of arr(opt.findings)){
+    const cls = f.status === "violation" ? "w" : f.status === "unknown" ? "x" : "c";
+    out.push(h("div", {class:"rule"}, h("span", {class:"id", text:f.rule_id}), h("span", {class:"tagb " + cls, text:String(f.status).toUpperCase()}),
+      h("div", {text:f.message}), h("q", {text:f.cite || ""})));
+  }
+  for (const r of arr(opt.needs_signoff)) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:typeof r === "string" ? r : (r.rule_id || JSON.stringify(r))}),
+    h("span", {class:"tagb c", text:"NEEDS SIGN-OFF"}), h("div", {text:typeof r === "string" ? "Sign-off required." : (r.message || "")})));
+  for (const r of arr(opt.refused_by)) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:r}), h("span", {class:"tagb w", text:"BLOCKED"})));
+  if (!out.length) out.push(h("div", {class:"norule", text:"NO RULE FLAGGED"}));
+  const day = arr(D.findings), n = k => day.filter(f => f.status === k).length;
+  if (day.length) out.push(h("div", {class:"rule"}, h("span", {class:"id", text:"PLAN · SAME DAY"}),
+    h("div", {text:n("violation") + " violations · " + n("warning") + " warnings · " + n("unknown") + " unknown"}), more("All", "scan")));
+  el.replaceChildren(...out);
+}
+
+/* ---------- replay of the real night ---------- */
+function startReplay(){
+  S.replay = true; const b = document.getElementById("replaybtn"); if (b) b.remove();
+  const ev = [], pts = LIVE.points, pick = new Set([0, pts.length - 1]);
+  for (const nm of ["Leuven", "Liege-Guillemins", "Verviers-Central", "Brussel-Noord"]){ const i = pts.findIndex(p => p.name === nm); if (i > 0) pick.add(i); }
+  for (const i of [...pick].sort((a,b) => a - b)){ const p = pts[i], t = tms(p.real_dep || p.real_arr, PLAN_DEP);
+    ev.push([t, "INFRABEL", "Train " + LIVE.train + (i ? " passes " : " leaves ") + p.name + ", planned " + (p.plan_dep || p.plan_arr).slice(0, 5) + " (+" + mins(p.delay_dep_s ?? p.delay_arr_s) + " min)", i === 0]); }
+  for (const [no, f] of Object.entries(LIVE.fleet)){ if (no === LIVE.train || !f.first.name.startsWith("Brussel") || !f.first.real_dep) continue; const t = tms(f.first.real_dep, PLAN_DEP);
+    if (t > sim) ev.push([t, "INFRABEL", "Train " + no + " leaves " + f.first.name + ", planned " + f.first.plan_dep.slice(0, 5) + " (+" + mins(f.first.delay_dep_s) + " min)", false]); }
+  queue = ev.sort((a,b) => a[0] - b[0]);
+  rate = (queue.at(-1)[0] + 60e3 - sim) / 24000;   /* the whole evening in about 24 seconds */
+  addLog(fmtHM(sim), "REPLAY", "Replay started · Infrabel recorded times");
+}
+function endReplay(){
+  rate = 0; queue = [];
+  const row = arr(LIVE.ops).find(o => o.line === LIVE.line && o.date === LIVE.date);
+  if (row) addLog("LOG", "ES LOG", "“" + row.note + "” Departure +" + row.dep_delay + " min, arrival +" + row.arr_delay + " min, " + (row.pax ?? "?") + " passengers, " +
+    (row.downgrades ?? 0) + " downgrades (" + row.cite.split(" · ")[1] + ")");
+  addLog("PLAN", "ACTUAL", (INC.note || "").split("The plan has it")[1].replace(/^[^:]*:\s*/, "").replace(/\.$/, "") + " · car ran in train, not sold");
+  setFlow(4, true);
+}
+function tick(){
+  const now = performance.now(), dt = now - lastTick; lastTick = now;
+  if (!LIVE) return;
+  sim += dt * rate;
+  while (queue.length && queue[0][0] <= sim){ const e = queue.shift(); addLog(fmtHM(e[0]), e[1], e[2]); if (e[3]) { S.departed = e[0]; renderFleet(); } if (!queue.length) endReplay(); }
+  document.getElementById("clock").textContent = fmtT(sim);
+  const tdk = Math.floor(sim / 60e3) + (S.replay ? "r" : ""); if (tdk !== tdKey){ tdKey = tdk; drawTD(); }
+  const nx = document.getElementById("next"), v = document.getElementById("nextv"), k = document.getElementById("nextk");
+  const d = Math.round((PLAN_DEP - sim) / 1000), a = Math.abs(d), hms = pad(Math.floor(a/3600)) + ":" + pad(Math.floor(a/60) % 60) + ":" + pad(a % 60);
+  if (S.departed){ nx.className = "next done"; k.textContent = "TRAIN " + LIVE.train + " DEPARTED"; v.textContent = fmtHM(S.departed) + " · +" + mins(LIVE.points[0].delay_dep_s) + " MIN"; }
+  else { nx.className = "next" + (d < 0 ? " late" : ""); k.textContent = "DECIDE BY DEPARTURE · " + fmtHM(PLAN_DEP) + " " + LIVE.points[0].name.toUpperCase();
+    v.textContent = (d >= 0 ? "T-" : "T+") + hms; }
+  document.querySelectorAll("[data-t]").forEach(el => { const t = +el.dataset.t, dd = Math.round((t - sim) / 1000), aa = Math.abs(dd);
+    el.textContent = (dd >= 0 ? "T-" : "T+") + pad(Math.floor(aa/3600)) + ":" + pad(Math.floor(aa/60) % 60) + ":" + pad(aa % 60); });
+}
+
+/* ---------- time-distance: plan against what ran ---------- */
+const TD_ST = [["Brussel-Zuid","Brussels"],["Leuven","Leuven"],["Liege-Guillemins","Liège"],["Verviers-Central","Verviers"],["Welkenraedt","Welkenr."],["Hergenrath","Hergenrath"]];
+let tdKey = null;
+function drawTD(){
+  const svg = document.getElementById("td"); if (!svg || !LIVE) return;
+  const P = TD_ST.map(([n, lab]) => { const p = LIVE.points.find(q => q.name === n); return p ? {lab, pa:tms(p.plan_arr || p.plan_dep, PLAN_DEP), pl:tms(p.plan_dep || p.plan_arr, PLAN_DEP), ra:tms(p.real_arr || p.real_dep, PLAN_DEP), re:tms(p.real_dep || p.real_arr, PLAN_DEP), d:mins(p.delay_dep_s ?? p.delay_arr_s), rt:(p.real_dep || p.real_arr).slice(0, 5)} : null; }).filter(Boolean);
+  if (P.length < 2) return;
+  const box = svg.getBoundingClientRect(), w = Math.max(300, box.width), ht = Math.max(220, box.height), M = {l:48, r:40, t:30, b:10};
+  svg.setAttribute("viewBox", `0 0 ${w} ${ht}`); svg.replaceChildren();
+  const H = 3600e3, t0 = Math.floor((PLAN_DEP - 40*60e3) / H) * H, t1 = Math.ceil(Math.max(...P.map(p => p.re)) / H) * H;
+  const x = i => M.l + i * (w - M.l - M.r) / (P.length - 1), y = t => M.t + (Math.min(t1, Math.max(t0, t)) - t0) / (t1 - t0) * (ht - M.t - M.b);
+  for (let t = t0; t <= t1; t += H){ svg.append(s("line", {x1:M.l - 4, x2:w - M.r + 30, y1:y(t), y2:y(t), stroke:"#D5D9E0", "stroke-width":1}));
+    svg.append(s("text", {x:M.l - 8, y:y(t) + 4, "text-anchor":"end"}, fmtHM(t))); }
+  P.forEach((p, i) => { svg.append(s("line", {x1:x(i), x2:x(i), y1:M.t, y2:ht - M.b, stroke:"#A9AFBC", "stroke-width":1}));
+    svg.append(s("text", {x:x(i), y:M.t - 12, "text-anchor":"middle"}, p.lab)); });
+  svg.append(s("polyline", {points:P.map((p, i) => x(i) + "," + y(p.pa) + " " + x(i) + "," + y(p.pl)).join(" "), fill:"none", stroke:"#475569", "stroke-width":2, "stroke-dasharray":"6 4"}));
+  const drawNow = () => { if (sim > t1) return; svg.append(s("line", {x1:M.l - 6, x2:w - M.r + 30, y1:y(sim), y2:y(sim), stroke:"#40002C", "stroke-width":2, "stroke-dasharray":"7 4"}));
+    svg.append(s("text", {x:w - M.r + 30, y:y(sim) - 5, "text-anchor":"end", style:"fill:#40002C"}, "NOW " + fmtHM(sim))); };
+  if (S.replay){
+    const E = P.flatMap((p, i) => i ? [[i, p.ra], [i, p.re]] : [[i, p.re]]);
+    const pts = [[x(0), y(PLAN_DEP)], [x(0), y(Math.min(sim, P[0].re))]]; let head = null;
+    if (sim >= P[0].re) for (let j = 0; j < E.length - 1; j++){
+      const [a, ta] = E[j], [b, tb] = E[j+1];
+      if (sim >= tb){ pts.push([x(b), y(tb)]); continue; }
+      const f = tb > ta ? (sim - ta) / (tb - ta) : 1; head = [x(a) + f * (x(b) - x(a)), y(sim)]; pts.push(head); break; }
+    svg.append(s("polyline", {points:pts.map(q => q.join(",")).join(" "), fill:"none", stroke:"#C81E1E", "stroke-width":4, "stroke-linejoin":"round", "stroke-linecap":"round"}));
+    P.forEach((p, i) => { if (sim < p.ra) return; svg.append(s("circle", {cx:x(i), cy:y(p.ra), r:4, fill:"#fff", stroke:"#1A0A14", "stroke-width":2}));
+      if (i === 0 || i === 2 || i === P.length - 1) svg.append(s("text", {x:x(i) + (i === P.length - 1 ? -8 : 8), y:y(p.ra) - 9, "text-anchor":i === P.length - 1 ? "end" : "start", style:"fill:#C81E1E"}, p.rt + " +" + p.d)); });
+    if (head) svg.append(s("path", {d:`M${head[0]} ${head[1]-6}l6 6l-6 6l-6-6z`, fill:"#1A0A14"}));
+    else if (sim < P[0].re && sim > PLAN_DEP) svg.append(s("text", {x:x(0) + 8, y:y(sim) + 14, style:"fill:#C81E1E"}, "HELD +" + Math.round((sim - PLAN_DEP) / 60e3)));
+  }
+  drawNow();
+  svg.append(s("circle", {cx:x(0), cy:y(PLAN_DEP), r:5, fill:"#C81E1E", stroke:"#1A0A14", "stroke-width":1.5}));
+  svg.append(s("text", {x:x(0) + 9, y:y(PLAN_DEP) - 6, style:"fill:#C81E1E"}, "DECIDE BY " + fmtHM(PLAN_DEP)));
+}
+
+/* ---------- train as planned, and after the chosen action ---------- */
+const PROD = {"1":"Classic", "2":"Seats", "3":"Comfort Std", "4":"Comfort Plus", "9":"Not sold", "-1":"Shunted out", "0":"Shunted in"};
+function renderConsist(){
+  const el = document.getElementById("cons"); if (!el || !LIVE || !arr(LIVE.consist).length) return;
+  const o = arr(D.options).find(x => x.id === S.sel), gone = new Set(arr(o && o.steps).filter(st => st.verb === "shunt_out" && st.car).map(st => st.car));
+  let left = 0;
+  const cells = LIVE.consist.map((c, i) => {
+    const out = gone.has(c.car); if (!out) left++;
+    const cls = out ? "w out" : c.car === INC.car ? "w" : !c.car ? "u" : c.flag === "Pay attention" ? "c" : "";
+    const f = out ? "✕ OUT" : c.car === INC.car ? "▲ BROKEN" : !c.car ? "? NOT IN PLAN" : c.flag === "Pay attention" ? "■ ATTENTION" : "";
+    return h("div", {class:"cc " + cls, title:c.cite},
+      h("div", {class:"n", text:c.car || c.uic.slice(-8)}), h("div", {class:"t", text:c.type + (/^\d+$/.test(c.pax_no) ? " · " + c.pax_no : "")}),
+      h("div", {class:"p", text:PROD[c.code] || (/^\d+$/.test(c.pax_no) ? "—" : c.pax_no)}), h("div", {class:"f", text:f}));
+  });
+  el.replaceChildren(...cells);
+  const hd = document.getElementById("consh"); if (hd) hd.textContent = LIVE.consist.length + " cars planned · " + left + " after this action · order as in order sheet";
+}
+
+/* ---------- fleet strip ---------- */
+function renderFleet(){
+  const el = document.getElementById("fleet"); if (!el) return;
+  const aff = affectedTrains(), touched = touchedLines(), mine = mineLines(), cards = [];
+  for (const [lk, L] of Object.entries(LINES)) for (const [no, dir] of [[L.outbound, "out"], [L.return, "back"]]){
+    if (!no) continue;
+    const route = dir === "out" ? L.name : L.name.split(" – ").reverse().join(" – ");
+    let cls = "n", st = "● NOT AFFECTED", tm = "";
+    if (aff.has(no)){ cls = "w"; st = "▲ AFFECTED"; }
+    else if (mine.has(lk)){ cls = "c"; st = "■ SAME LINE"; }
+    else if (touched.has(lk)){ cls = "c"; st = "■ SAME YARD"; }
+    let tmEl = null;
+    if (LIVE){ const f = LIVE.fleet[no];
+      if (!f){ if (cls === "n") continue; tm = "no running data"; }
+      else if (f.first.plan_dep && f.first.name.startsWith("Brussel")){ const t = tms(f.first.plan_dep), r = tms(f.first.real_dep, t);
+        if (sim >= r){ tm = "left " + f.first.real_dep.slice(0, 5) + " · +" + mins(f.first.delay_dep_s) + " min"; }
+        else tmEl = h("div", {class:"tm"}, "dep " + f.first.plan_dep.slice(0, 5) + " · ", h("span", {"data-t":t})); }
+      else { tm = "arr " + f.last.real_arr.slice(0, 5) + " · +" + mins(f.last.delay_arr_s) + " min"; if (cls !== "w"){ if (mins(f.last.delay_arr_s) > 60){ cls = "c"; st = "■ ARRIVED LATE"; } else { cls = "n"; st = "● ARRIVED"; } } }
+    }
+    cards.push(h("div", {class:"fc " + cls}, h("div", {class:"top"}, h("span", {class:"no", text:no}), h("span", {class:"st " + cls, text:st})),
+      h("div", {class:"rt", text:route}), tmEl || h("div", {class:"tm", text:tm || (LIVE ? "" : "no time on file")})));
+  }
+  el.replaceChildren(...cards);
+}
+
+function renderFoot(){
+  const el = document.getElementById("foot"); if (!el) return;
+  const a = D.documents.audit || {}, v = D.validation;
+  const m = v && /^(\d+) conflicts/.exec(v.headline || "");
+  el.replaceChildren(
+    h("span", {}, h("span", {class:"ok", text:"✓ DECISION LOG"}), " · sha256 " + String(a.hash || "").slice(0, 16) + "…"),
+    h("span", {text:m ? "PLAN SCAN · " + m[1] + " CONFLICTS AHEAD" : (v ? v.headline : "")}), more("Plan scan", "scan"));
+}
+
+/* ---------- workflow strip ---------- */
+function setFlow(i, quiet){
+  S.flow = Math.max(0, Math.min(FLOW.length - 1, i));
+  document.querySelectorAll(".flow button").forEach((b, j) => { b.className = j === S.flow ? "on" : j < S.flow ? "past" : ""; });
+  document.querySelectorAll(".hl").forEach(e => e.classList.remove("hl"));
+  if (quiet) return;
+  document.querySelectorAll("." + FLOW[S.flow][1]).forEach((e, j) => { e.classList.add("hl"); if (!j) e.scrollIntoView({block:"nearest", behavior:"smooth"}); });
+}
+
+/* ---------- main screen ---------- */
+function build(){
+  const app = document.getElementById("app"), lineNames = [...mineLines()].map(k => LINES[k].name).join(" + ");
+  const row = LIVE ? arr(LIVE.ops).find(o => o.line === LIVE.line && o.date === LIVE.date) : null;
+  const ranked = arr(D.options).filter(o => o.rank > 0), clean = ranked.filter(o => !arr(o.needs_signoff).length && o.eur != null).sort((a,b) => a.eur - b.eur)[0];
+  const nSign = arr(D.options).filter(o => arr(o.needs_signoff).length).length, nRef = arr(D.options).filter(o => o.refused).length;
+  const trainNo = LIVE ? LIVE.train : [...affectedTrains()].join(" · ") || "—";
+  app.replaceChildren(
+    h("div", {class:"hdr"},
+      h("div", {class:"brand"}, h("b", {text:"European Sleeper · Operations Decision Support"}),
+        h("span", {text:(LIVE ? "Train " + LIVE.train + " · " : "") + lineNames + (INC.date ? " · " + INC.date : "")})),
+      h("div", {class:"clock"}, h("div", {class:"t", id:"clock", text:LIVE ? fmtT(sim) : "— : —"}),
+        h("div", {class:"d", text:LIVE ? LIVE.date + " · BRUSSELS" : "NO TIME ON FILE"})),
+      h("div", {class:"next", id:"next"}, h("div", {class:"k", id:"nextk", text:"DECIDE BY"}), h("div", {class:"v", id:"nextv", text:"NOT ON FILE"}))),
+    h("div", {class:"replay"}, h("span", {text:LIVE ? "REPLAY " + LIVE.date + " · NOT LIVE" : "RULEBOOK CASE §11 · NOT LIVE"}),
+      h("span", {text:LIVE ? "SRC ES PLAN · ES OPS LOG · INFRABEL (CC0)" : "SRC ES RULEBOOK · ES PLAN"})),
+    h("div", {class:"master sec-receive", id:"master"}, h("span", {class:"tier", text:"▲ WARNING 1"}),
+      h("span", {class:"msg", text:String(INC.note || "").split(". ")[0].replace(/\.$/, "")}), h("span", {class:"src", text:"SRC " + (INC.cite || "—")}),
+      h("button", {text:"ACK", onclick:e => { S.acked = true; document.getElementById("master").classList.add("acked"); e.target.textContent = "ACKED " + nowLabel(); e.target.disabled = true; addLog(nowLabel(), "ACK", "Acknowledged · " + (D.user || "planner")); }}),
+      more("Case file", "case")),
+    h("div", {class:"flow"}, FLOW.map(([name], i) => h("button", {onclick:() => setFlow(i)}, h("b", {text:String(i + 1)}), name))),
+    h("div", {class:"fleet sec-affected", id:"fleet"}),
+    h("div", {class:"wrap"},
+      h("div", {class:"col"},
+        h("section", {class:"panel sec-affected trow"},
+          h("div", {class:"train"}, h("div", {class:"no", style:trainNo.length > 4 ? "font-size:34px" : null, text:trainNo}),
+            h("div", {}, h("div", {class:"rt", text:lineNames + " · car " + (INC.car || "—")}),
+              h("div", {class:"sub", text:String(INC.kind || "").replace(/_/g, " ").toUpperCase() + " · " + (INC.place ? shortName(INC.place) : "LOCATION UNKNOWN") })) ),
+          h("div", {class:"tele"},
+            row ? h("div", {class:"crit"}, h("div", {class:"lab", text:"Passengers"}), h("div", {class:"v", text:String(row.pax ?? "—")}), h("div", {class:"s", text:row.cite.split(" · ")[1].replace("B", "E")}))
+                : h("div", {class:"crit"}, h("div", {class:"lab", text:"Cars in play"}), h("div", {class:"v", text:String(arr(D.cars).length)}), h("div", {class:"s", text:INC.cite || ""})),
+            h("div", {}, h("div", {class:"lab", text:"Lowest cost"}), h("div", {class:"v", text:clean ? eur(clean.eur) : "—"}), h("div", {class:"s", text:clean ? split(clean) : "none"})),
+            h("div", {}, h("div", {class:"lab", text:"Options"}), h("div", {class:"v", text:String(arr(D.options).length)}), h("div", {class:"s", text:ranked.length + " feasible · " + nRef + " blocked · " + arr(D.options).filter(o => o.proposed).length + " not priced" + (nSign ? " · " + nSign + " sign-off" : "")})))),
+        LIVE && arr(LIVE.consist).length ? h("section", {class:"panel sec-affected sec-actions"}, h("header", {}, h("h2", {text:"Train " + LIVE.train + " · cars"}), h("span", {class:"lab muted", id:"consh"})),
+          h("div", {class:"cons", id:"cons"})) : null,
+        h("div", {class:"three"},
+          h("section", {class:"panel sec-affected"}, h("header", {}, h("h2", {text:"Network"}), more("Case file", "case")),
+            s("svg", {id:"map", role:"img", "aria-label":"Network map with the cascade and the car moves of the selected action"}),
+            h("div", {class:"legend"}, h("span", {}, h("i", {}), "affected line"), h("span", {}, h("i", {style:"border-top:3px dashed #4A3A45"}), "same yard"),
+              h("span", {}, h("i", {style:"border-top:4px solid #F2A900"}), "knock-on"), h("span", {}, h("i", {style:"border-top:3px dashed #15803D"}), "car move"),
+              h("span", {text:(INC.place ? "▲ incident" : "▲ first move · car location unknown") + " · □ workshop"}))),
+          h("section", {class:"panel dec sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Decision"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})),
+          h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {id:"board-ttl", text:"Checks"})),
+            h("div", {id:"board"}), h("div", {id:"rules"}))),
+        h("div", {class:"two", style:LIVE ? null : "grid-template-columns:1fr"},
+          LIVE ? h("section", {class:"panel sec-affected sec-proof"}, h("header", {}, h("h2", {text:"Time-distance · " + LIVE.train + " · Belgium"}), h("span", {class:"lab muted", text:"- - plan · ━ ran"})),
+            s("svg", {id:"td", role:"img", "aria-label":"Time-distance diagram, train " + LIVE.train + ", planned against recorded"})) : null,
+          h("section", {class:"panel sec-receive"}, h("header", {}, h("h2", {text:"Event log"}), h("span", {class:"lab muted", text:LIVE ? "replay" : "this session"})), h("div", {class:"log", id:"log"}))))),
+    h("div", {class:"foot sec-proof", id:"foot"}));
+  renderFleet(); drawMap(); drawTD(); renderConsist(); renderBoard(); renderCall(); renderRules(); renderLog(document.getElementById("log")); renderFoot(); setFlow(S.flow, true);
+}
+
+/* ---------- detail pages ---------- */
+function facts(list){ return arr(list).map(f => { const [a, b] = splitFact(f); return h("div", {class:"fact"}, h("span", {text:a}), h("span", {class:"src", text:b})); }); }
+function tbl(head, rows){ return h("table", {}, h("thead", {}, h("tr", {}, head.map(x => h("th", {text:x})))), h("tbody", {}, rows.map(r => h("tr", {}, r.map((c, i) => h("td", {class:i === r.length - 1 ? "src" : null}, c)))))); }
+function pageAction(id){
+  const o = optById(id); if (!o) return [h("p", {text:"No such action."})];
+  const state = o.refused ? "BLOCKED · " + arr(o.refused_by).join(", ") : o.proposed ? "PROPOSAL · not ES policy · not priced" : arr(o.needs_signoff).length ? "NEEDS SIGN-OFF" : "No rule flagged";
+  return [h("h2", {text:ttl(o)}), h("p", {class:"lede", text:state + (o.eur != null ? " · " + eur(o.eur) + " · " + split(o) : "") }),
+    panel("Steps", null, tbl(["Do", "Car", "Where", "Train", "Basis"], arr(o.steps).map(st => [st.verb, st.car, shortName(st.at), st.train || "—", st.note || ""]))),
+    AXES.map(([k, name]) => { const ax = (o.axes || {})[k] || {}, [cls, word] = verdict(o, k);
+      return panel(name, h("span", {class:"verdict " + cls, text:word}), h("div", {class:"body", style:"padding:8px 10px;font-weight:600", text:tidy(ax.headline || "")}), facts(ax.facts)); }),
+    arr(o.findings).length ? panel("Rule findings on these steps", null, tbl(["Rule", "Status", "Finding", "Source"], o.findings.map(f => [f.rule_id, f.status, f.message, f.cite || ""]))) : null,
+    h("p", {class:"muted", text:"OK ≥ 80 · CAUTION ≥ 50 · IMPACT < 50 · NO DATA is never counted as OK"})];
+}
+function confSummary(){
+  if (!S.recorded) return "No decision yet.";
+  const docs = (D.documents.by_option || {})[S.recorded.option] || {};
+  return arr(docs.messages).length ? outstanding(docs) : "No messages.";
+}
+function pageCase(){
+  const nodes = arr(D.impact.nodes), kinds = k => nodes.filter(n => n.kind === k).map(n => n.label).join(", ") || "—";
+  const missing = [];
+  if (!INC.place) missing.push(["Where the car stands", "The plan cell gives no place."]);
+  if (LIVE) { const notes = (LIVE.ops || []).filter(o => o.line === LIVE.line && o.note).map(o => o.date + ": “" + o.note + "” (" + o.cite + ")").join(" · ");
+    missing.push(["Which car the log means", "Log gives no full car number. Read as " + (INC.car || "") + " from the plan cell. Log: " + (notes || "no note")]); }
+  for (const o of arr(D.options)) for (const st of arr(o.steps)) if (/ASSUMPTION/.test(st.note || "")){ missing.push(["Direction of the train", st.note]); break; }
+  missing.push(["Reserve car fit for service", "Not in the data."], ["Action taken that night", LIVE ? "Plan shows the car kept in train, not sold. Not among the options here; options are priced as if the car were sold." : "Not in the data."], ["Confirmations from partners", confSummary()], ["Price of one shunting move", "Not in the rulebook. €300 estimate."]);
+  const seen = new Set(), miss = missing.filter(m => !seen.has(m[0]) && seen.add(m[0]));
+  return [h("h2", {text:"Case file"}), h("p", {class:"lede", text:INC.note || ""}),
+    h("div", {class:"g2"},
+      panel("The case", null, tbl(["Field", "Value"], [["Type", String(INC.kind || "").replace(/_/g, " ")], ["Car", INC.car || "—"], ["Date", INC.date || "not given in the rulebook"],
+        ["Decision deadline", LIVE ? "Planned departure " + LIVE.planned_dep.slice(0, 5) + ", " + LIVE.points[0].name + " (Infrabel)" : "not on file"],
+        ["Trains", [...affectedTrains()].join(", ") || "—"], ["Lines", kinds("line")], ["Places", kinds("place")], ["Partners", kinds("partner")],
+        ["Responsible", D.user || "—"], ["Status", S.recorded ? "Decided: " + ttl(optById(S.recorded.option)) : "Decision pending"], ["Source", INC.cite || "—"]])),
+      panel("Open items", null, tbl(["What", "Why it is open"], miss))),
+    S.recorded ? panel("Messages and confirmations", null, tbl(["To", "Subject", "State"], arr(((D.documents.by_option || {})[S.recorded.option] || {}).messages).map(m => [m.to, m.subject, confTag(m.to, true)]))) : null,
+    panel("Impact chain", null, tbl(["Hop", "From", "To", "Why", "Source"], arr(D.impact.edges).slice().sort((a,b) => (a.hop||1) - (b.hop||1)).map(e =>
+      [String(e.hop || 1), (nodes.find(n => n.id === e.src) || {}).label || e.src, (nodes.find(n => n.id === e.dst) || {}).label || e.dst, e.why || "", e.cite || ""]))),
+    LIVE ? panel("ES operations log", null, tbl(["Line", "Date", "Dep", "Arr", "Pax", "Note", "Cell"], arr(LIVE.ops).map(o => [o.line, o.date, o.dep_delay == null ? "—" : "+" + o.dep_delay, o.arr_delay == null ? "—" : "+" + o.arr_delay, String(o.pax ?? "—"), o.note, o.cite.split(" · ")[1]]))) : null,
+    LIVE ? panel("Running data · " + LIVE.source + " · " + LIVE.licence, null, tbl(["Point", "Planned", "Actual", "Delay"], LIVE.points.map(p =>
+      [p.name, (p.plan_dep || p.plan_arr), (p.real_dep || p.real_arr), "+" + mins(p.delay_dep_s ?? p.delay_arr_s) + " min"]))) : null,
+    arr(D.cars).length ? panel("Cars in play", null, tbl(["Car", "Owner / type", "At", "Note"], D.cars.map(c => [c.car, [c.owner, c.type].join(" "), shortName(c.start) || "—", c.note || ""]))) : null];
+}
+function pageDocs(){
+  const id = S.recorded ? S.recorded.option : S.sel, docs = (D.documents.by_option || {})[id] || {}, a = D.documents.audit || {};
+  return [h("h2", {text:"Documents"}), h("p", {class:"lede", text:"For: " + ttl(optById(id)) + ". Drafts only; nothing is sent."}),
+    h("div", {class:"g2"},
+      panel("Task order to TCS (German)", null, docs.error ? h("div", {class:"norule", text:docs.error}) : h("pre", {text:docs.task_order_de || "—"})),
+      h("div", {style:"display:flex;flex-direction:column;gap:12px"},
+        arr(docs.messages).map(m => panel(m.to, S.recorded ? confTag(m.to, true) : h("span", {class:"tagb x", text:"DRAFT"}), h("pre", {text:m.subject + "\n\n" + m.body}))))),
+    panel("Decision entry", null, tbl(["Field", "Value"], [
+      ["Entry written at build (rank 1 action)", "sha256 " + (a.hash || "")], ["Chained after", a.prev || "—"], ["Written", (a.at || "") + " · " + (a.user || "")],
+      ["This session", S.recorded ? S.recorded.option + " · " + S.recorded.reason + " · " + S.recorded.at + " · " + S.recorded.seal : "no decision recorded yet"],
+      ["Store", "Append-only hash-chained log file (build/audit.jsonl). Proves order and integrity."]]))];
+}
+function pageScan(){
+  const v = D.validation, f = arr(D.findings), groups = ["violation", "warning", "unknown", "ok"];
+  return [h("h2", {text:"Plan scan"}), v ? h("div", {class:"big", text:String(v.headline).split(" — ")[0].replace(" are written into the plan", " in the plan")}) : null,
+    v ? panel("What the scan found", null, arr(v.facts).map(x => h("div", {class:"fact", style:"grid-template-columns:1fr"}, h("span", {text:x})))) : null,
+    f.length ? panel("Rule findings on this day, all lines · " + f.length, null, tbl(["Rule", "Status", "Finding", "Source"], groups.flatMap(g => f.filter(x => x.status === g)).map(x =>
+      [x.rule_id, x.status, x.message, (x.cite || "") + (arr(x.evidence)[0] ? " · " + x.evidence[0].sheet + "!" + x.evidence[0].cell : "")]))) : null,
+    panel("Assumptions", null, arr(D.assumptions).map(x => h("div", {class:"fact", style:"grid-template-columns:1fr"}, h("span", {text:x})))),
+    null];
+}
+function route(){
+  const pg = document.getElementById("page"), [name, arg] = decodeURIComponent(location.hash.slice(1)).split("/");
+  const pages = {action:["Action", () => pageAction(arg)], "case":["Case file", pageCase], documents:["Documents", pageDocs], scan:["Plan scan", pageScan]};
+  if (!pages[name]){ pg.classList.remove("on"); pg.replaceChildren(); return; }
+  pg.replaceChildren(h("div", {class:"pbar"}, h("button", {text:"← BACK", onclick:back}), h("h1", {text:pages[name][0]}),
+    h("nav", {}, [["case", "Case file"], ["action/" + S.sel, "Action"], ["documents", "Documents"], ["scan", "Plan scan"]].map(([hs, t]) => h("button", {text:t, onclick:() => { location.hash = hs; }})))),
+    h("div", {class:"pbody"}, pages[name][1]()));
+  pg.classList.add("on"); pg.scrollTop = 0;
+}
+function back(){ history.replaceState(null, "", location.pathname + location.search); route(); }
+
+window.addEventListener("hashchange", route);
+window.addEventListener("resize", () => { drawMap(); drawTD(); });
+window.addEventListener("keydown", e => {
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" && e.key.startsWith("Arrow")) return;
+  if (e.key === "Escape") back();
+  else if (document.getElementById("page").classList.contains("on")) return;
+  else if (e.key === "ArrowRight" || e.key === "PageDown") setFlow(S.flow + 1);
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") setFlow(S.flow - 1);
+});
+seedLog(); build(); route(); tick(); setInterval(tick, 200);
+</script>
+</body>
+</html>
