@@ -27,8 +27,8 @@ Legend: [ ] open · [~] in progress · [x] done and checked by the main agent
 - [x] 4.2 Rule toggle (hard <-> soft) — `run_scenario.py night ... --relax <rule>` builds a second "what if" page
 
 ## Phase 5 — Submission
-- [ ] 5.1 Screen recording
-- [ ] 5.2 Two-line 30-day plan
+- [x] 5.1 Screen recording — build/relay_demo.mp4 (silent backup, not committed)
+- [x] 5.2 Two-line 30-day plan — SUBMISSION.md
 - [ ] 5.3 Push to the ES org repo (needs the link from the user)
 
 ## Phase 6 — Rehearsal

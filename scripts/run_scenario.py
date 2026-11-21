@@ -138,7 +138,7 @@ def night(plan, network, costs, line, date, car, relax):
     name = f"night_{line.lower()}_{date}" + ("_relaxed" if relax else "")
     sub = f"A real night from the plan · {cell.src.sheet}!{cell.src.cell}"
     if relax:
-        sub += " · WHAT IF: " + ", ".join(relax) + " treated as soft"
+        sub = "WHAT IF · " + ", ".join(relax) + " soft · not ES policy"
     return assemble(name, f"Relay · {line} train, {date}", sub, incident, scenario, plan, rules, network, costs,
                     cars, check_day(plan, date, rules=rules, network=network, costs=costs),
                     ["Reserve candidates come from the plan grid; whether a car is physically fit is not in the data."]
