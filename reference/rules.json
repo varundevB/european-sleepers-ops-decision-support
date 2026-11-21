@@ -1,0 +1,42 @@
+{
+  "_note": "Rules are data. tier: hard = refuse the option; soft = allowed, priced and shown; proposed = ours, always labelled as a proposal. Tiers are OUR reading of the rulebook; ES has not confirmed them. Change a tier here and nothing else.",
+  "rules": [
+    {"id": "approval_country", "tier": "hard", "title": "Car approved for every country on the route",
+     "cite": "§3: RDC none, they may run everywhere · GFF car 309 may not run to Italy; the BDCM type may not run to France · EuroExpress may not run to Italy. 'Hard to change, so treat them as fixed.'",
+     "params": {"deny": [
+        {"owner": "EE", "country": "IT"},
+        {"owner": "Gff", "car_suffix": "309", "country": "IT"},
+        {"owner": "Gff", "type_prefix": "BDCM", "country": "FR"}
+     ], "unknown_owners": ["SVG", "Tri", "CD"]}},
+    {"id": "max_length", "tier": "hard", "title": "Train length within platform limits",
+     "cite": "§5: 16 cars in Germany, 15 in Belgium, and 13 in Switzerland, Italy and France. Paris and Prague can change length on the route by exchanging cars at the workshop; Milan cannot.",
+     "params": {"limits": {"DE": 16, "BE": 15, "CH": 13, "IT": 13, "FR": 13}, "unknown": ["NL", "CZ"]}},
+    {"id": "double_planned", "tier": "hard", "title": "One car, one train, one night",
+     "cite": "README M3: 'the same car planned twice'. A physical car cannot be in two trains.", "params": {}},
+    {"id": "no_shunt_with_pax", "tier": "hard", "title": "No shunting with passengers on board",
+     "cite": "§5: Cars with passengers on board cannot be shunted. Changes on the route happen at night with empty cars.", "params": {}},
+    {"id": "door_orientation", "tier": "hard", "title": "A usable door on each side at both ends of the train",
+     "cite": "§5: A sleeper car cannot stand directly behind the locomotive, or at the end of the train, with its doors at the wrong end.",
+     "params": {"sleeper_types": ["WL30", "WL33"], "needs": "door_end per car; UNKNOWN when the order sheet does not give it"}},
+    {"id": "high_voltage_rear", "tier": "hard", "title": "A car without high voltage runs empty at the back",
+     "cite": "§5: A car without high voltage breaks the power connection to the cars behind it. It can only run empty at the back, and not on a run where the locomotive changes sides.", "params": {}},
+    {"id": "product_matches_car", "tier": "hard", "title": "The physical car matches the product sold on its car number",
+     "cite": "§3/§4: sleeper UIC cars are always Comfort Plus; Bim(d)z is always seating; a booked number is tied to its product.",
+     "params": {"always_cp": ["WL30", "WL33"], "always_seat": ["Bimz", "Bimdz", "Am66", "Bm 72", "Bomdz"]}},
+    {"id": "product_mix", "tier": "soft", "title": "2 Comfort Plus, 2 Comfort Standard, 1 seating car per train",
+     "cite": "§3: Every train sells 2 Comfort Plus cars and 2 Comfort Standard cars and mostly 1 seating car, the rest is Classic couchettes.",
+     "params": {"min": {"4": 2, "3": 2, "2": 1}}},
+    {"id": "second_conductor", "tier": "soft", "title": "Second conductor from 9 occupied cars",
+     "cite": "§12 and Legend 'max 8 with clients (1 conductor confirmed)'.", "params": {"from_occupied_cars": 9}},
+    {"id": "weekend_workshop", "tier": "soft", "title": "No drop or collection at a workshop over the weekend",
+     "cite": "§7: Workshops are closed at the weekend. Collected Friday evening at the latest; dropped Sunday to Thursday night. Graffiti risk.", "params": {}},
+    {"id": "mattress_stays", "tier": "soft", "title": "A Comfort Standard (mattress) car stays in its train",
+     "cite": "§3: Mattress cars stay put… a Comfort Standard car effectively stays in its train.", "params": {}},
+    {"id": "workshop_interval", "tier": "hard", "title": "Workshop check every 55,000 to 60,000 km",
+     "cite": "§7. No odometer exists in any provided file, so this rule always returns UNKNOWN.", "params": {"always_unknown": true}},
+    {"id": "p_repeat_defect", "tier": "proposed", "title": "PROPOSAL: early warning when a car is marked not usable / pay attention 3+ times in 10 days",
+     "cite": "Ours. Not ES policy. Computed from the cell fills in the fleet grid.", "params": {"window_days": 10, "min_marks": 3}},
+    {"id": "p_no_reserve_in_reach", "tier": "proposed", "title": "PROPOSAL: warn when a train-night has no approved reserve car of the same product",
+     "cite": "Ours. Not ES policy. Computed from code X / parked cars and the approval table.", "params": {}}
+  ]
+}
