@@ -18,13 +18,13 @@ Legend: [ ] open · [~] in progress · [x] done and checked by the main agent
 - [x] 2.E Map + replay — views/
 
 ## Phase 3 — Integration (main agent)
-- [~] 3.1 Wire lanes: scripts/run_scenario.py -> build/scenario.json -> build/relay_demo.html
-- [ ] 3.2 Real Friday end to end on the real grid
-- [ ] 3.3 Full test run, fix what breaks
+- [x] 3.1 Wire lanes: scripts/run_scenario.py -> build/scenario.json -> build/relay_demo.html
+- [x] 3.2 Real Friday end to end on the real grid
+- [x] 3.3 Full test run, fix what breaks
 
 ## Phase 4 — Proof
-- [ ] 4.1 Replay last year's nights -> the impact number
-- [ ] 4.2 Rule toggle (hard <-> soft)
+- [x] 4.1 Replay last year's nights -> the impact number
+- [x] 4.2 Rule toggle (hard <-> soft) — `run_scenario.py night ... --relax <rule>` builds a second "what if" page
 
 ## Phase 5 — Submission
 - [ ] 5.1 Screen recording
