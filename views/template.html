@@ -72,7 +72,7 @@ border-radius:50%;margin-right:8px}
 .st.x{background:var(--hatch);border-style:dashed}
 
 /* main grid */
-.wrap{display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:10px;padding:10px 18px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px 18px}
 .col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .panel{background:var(--panel);border:2px solid var(--ink);border-radius:2px;min-width:0}
 .panel>header{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#F4F5F8;
@@ -97,6 +97,14 @@ text-transform:uppercase;color:var(--ink)}
 .tele .s{font:600 11px var(--mono);color:var(--muted)}
 
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:10px}
+.three{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);gap:10px;align-items:start}
+.three .board{grid-template-columns:1fr 1fr}.three .cell:nth-child(3n){border-right:1px solid var(--rule)}.three .cell:nth-child(2n){border-right:0}
+.dec{border-width:3px}.dec>header{background:var(--ink)}.dec>header h2{color:#fff;font-size:14px}.dec>header .lab{color:#fff}
+.dec .opt-r{padding:9px 14px;gap:3px 12px}.dec .opt-r .ttl{font-size:18px}.dec .opt-r .eur{font-size:24px}.dec .opt-r .meta{font-size:12.5px}
+.dec .opt-r input{width:20px;height:20px}.dec .opt-r.off{padding:4px 14px}.dec .opt-r.off .ttl{font-size:14px}.dec .opt-r.off .eur{font-size:15px}.dec .opt-r.off .meta{font-size:11px}
+.dec .opt-r{padding:7px 14px}.dec #call{display:grid;grid-template-columns:minmax(0,1fr) 250px}.dec #call>*{grid-column:1 / 3}.dec #call>.why{grid-column:1;border-bottom:0}.dec #call>.armrow{grid-column:2;align-self:end;flex-direction:column;align-items:stretch}.dec #call>.hint{display:none}
+.dec .why{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;align-items:center}.dec .why textarea{order:3;grid-column:1 / 3}.dec .why .quick{margin-top:0}
+.train .no{font-size:40px}.tele div{padding:4px 12px}.tele .v{font-size:21px}.dec .saves{font-size:13px}.dec .arm{font-size:17px;padding:13px}.dec .why textarea{font-size:15px}
 #map{display:block;width:100%;height:270px}
 .cons{display:flex;gap:4px;padding:8px 10px;overflow-x:auto}
 .cc{flex:1 1 0;min-width:84px;border:2px solid var(--ink);border-radius:2px;padding:4px 6px;background:var(--panel);border-top-width:7px}
@@ -196,7 +204,7 @@ td.src,span.src{font:600 12px var(--mono);color:var(--muted)}
 pre{margin:0;padding:10px;font:13px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .big{font:800 30px/1.15 var(--sans)}
-@media (max-width:1100px){.wrap{grid-template-columns:1fr}.two,.g2{grid-template-columns:1fr}}
+@media (max-width:1100px){.wrap{grid-template-columns:1fr}.two,.three,.g2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -668,20 +676,19 @@ function build(){
             h("div", {}, h("div", {class:"lab", text:"Options"}), h("div", {class:"v", text:String(arr(D.options).length)}), h("div", {class:"s", text:ranked.length + " feasible · " + nRef + " blocked · " + arr(D.options).filter(o => o.proposed).length + " not priced" + (nSign ? " · " + nSign + " sign-off" : "")})))),
         LIVE && arr(LIVE.consist).length ? h("section", {class:"panel sec-affected sec-actions"}, h("header", {}, h("h2", {text:"Train " + LIVE.train + " · cars"}), h("span", {class:"lab muted", id:"consh"})),
           h("div", {class:"cons", id:"cons"})) : null,
-        h("div", {class:"two"},
+        h("div", {class:"three"},
           h("section", {class:"panel sec-affected"}, h("header", {}, h("h2", {text:"Network"}), more("Case file", "case")),
             s("svg", {id:"map", role:"img", "aria-label":"Network map with the cascade and the car moves of the selected action"}),
             h("div", {class:"legend"}, h("span", {}, h("i", {}), "affected line"), h("span", {}, h("i", {style:"border-top:3px dashed #4A3A45"}), "same yard"),
               h("span", {}, h("i", {style:"border-top:4px solid #F2A900"}), "knock-on"), h("span", {}, h("i", {style:"border-top:3px dashed #15803D"}), "car move"),
               h("span", {text:(INC.place ? "▲ incident" : "▲ first move · car location unknown") + " · □ workshop"}))),
+          h("section", {class:"panel dec sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Decision"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})),
           h("section", {class:"panel sec-actions"}, h("header", {}, h("h2", {id:"board-ttl", text:"Checks"})),
             h("div", {id:"board"}), h("div", {id:"rules"}))),
         h("div", {class:"two", style:LIVE ? null : "grid-template-columns:1fr"},
           LIVE ? h("section", {class:"panel sec-affected sec-proof"}, h("header", {}, h("h2", {text:"Time-distance · " + LIVE.train + " · Belgium"}), h("span", {class:"lab muted", text:"- - plan · ━ ran"})),
             s("svg", {id:"td", role:"img", "aria-label":"Time-distance diagram, train " + LIVE.train + ", planned against recorded"})) : null,
-          h("section", {class:"panel sec-receive"}, h("header", {}, h("h2", {text:"Event log"}), h("span", {class:"lab muted", text:LIVE ? "replay" : "this session"})), h("div", {class:"log", id:"log"})))),
-      h("div", {class:"col"},
-        h("section", {class:"panel sec-actions sec-decide"}, h("header", {}, h("h2", {text:"Decision"}), h("span", {class:"lab muted", text:D.user || ""})), h("div", {id:"call"})))),
+          h("section", {class:"panel sec-receive"}, h("header", {}, h("h2", {text:"Event log"}), h("span", {class:"lab muted", text:LIVE ? "replay" : "this session"})), h("div", {class:"log", id:"log"}))))),
     h("div", {class:"foot sec-proof", id:"foot"}));
   renderFleet(); drawMap(); drawTD(); renderConsist(); renderBoard(); renderCall(); renderRules(); renderLog(document.getElementById("log")); renderFoot(); setFlow(S.flow, true);
 }
