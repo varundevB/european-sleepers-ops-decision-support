@@ -60,7 +60,7 @@ border-radius:50%;margin-right:8px}
 .flow button.past{color:var(--ink)}
 
 /* fleet strip */
-.fleet{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:10px 18px 0}
+.fleet{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;padding:10px 18px 0}
 .fc{background:var(--panel);border:2px solid var(--ink);border-left-width:10px;border-radius:2px;padding:6px 10px;min-width:0}
 .fc.w{border-left-color:var(--warn)}.fc.c{border-left-color:var(--caut)}.fc.a{border-left-color:var(--adv)}.fc.n{border-left-color:var(--go)}
 .fc .no{font:800 24px/1 var(--mono)}
@@ -189,7 +189,7 @@ td.src,span.src{font:600 12px var(--mono);color:var(--muted)}
 pre{margin:0;padding:10px;font:13px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .big{font:800 30px/1.15 var(--sans)}
-@media (max-width:1100px){.wrap{grid-template-columns:1fr}.two,.g2{grid-template-columns:1fr}.fleet{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:1100px){.wrap{grid-template-columns:1fr}.two,.g2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -575,7 +575,7 @@ function renderFleet(){
     else if (touched.has(lk)){ cls = "c"; st = "■ SAME YARD"; }
     let tmEl = null;
     if (LIVE){ const f = LIVE.fleet[no];
-      if (!f){ tm = "no running data"; if (cls === "n"){ cls = "a"; st = "ⓘ NO DATA"; } }
+      if (!f){ if (cls === "n") continue; tm = "no running data"; }
       else if (f.first.plan_dep && f.first.name.startsWith("Brussel")){ const t = tms(f.first.plan_dep), r = tms(f.first.real_dep, t);
         if (sim >= r){ tm = "left " + f.first.real_dep.slice(0, 5) + " · +" + mins(f.first.delay_dep_s) + " min"; }
         else tmEl = h("div", {class:"tm"}, "dep " + f.first.plan_dep.slice(0, 5) + " · ", h("span", {"data-t":t})); }
