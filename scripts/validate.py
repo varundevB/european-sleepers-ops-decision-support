@@ -28,8 +28,6 @@ def scan_plan(plan, today: str) -> dict:
     future = collections.Counter()
     examples = collections.defaultdict(list)
     for d in dates:
-        lo = (datetime.date.fromisoformat(d) - datetime.timedelta(days=10)).isoformat()
-        window = [c for k in dates if lo <= k <= d for c in by[k]] if False else None
         cells = []
         dd = datetime.date.fromisoformat(d)
         for i in range(11):
@@ -67,7 +65,16 @@ def read_ops(costs) -> dict:
         if n.arr_delay > 60 and n.pax:
             share = r50 if n.arr_delay > 120 else r25
             c["pax_on_late_trains"] += n.pax
-            c["refund_exposure_eur"] += round(n.pax * fare * share)
+            c["refund_upper_bound_eur"] += round(n.pax * fare * share)
+            # The log's own count of passengers more than 1 h late (column F) is used where it is filled in.
+            if n.pax_over_1h is not None:
+                late = min(n.pax_over_1h, n.pax)
+                c["late_rows_with_logged_count"] += 1
+            else:
+                late = n.pax
+                c["late_rows_without_logged_count"] += 1
+            c["pax_logged_late"] += late
+            c["refund_exposure_eur"] += round(late * fare * share)
         if (n.downgrades or 0) > 0 or (n.cancellations or 0) > 0:
             c["nights_with_downgrade_or_cancel"] += 1
     for line, c in res.items():

@@ -44,8 +44,11 @@ def _validation():
         f"trains, and {fut.get('max_length', 0)} nights with more cars written than the shortest platform limit.",
         "Over-length is a flag to check, not a proven error: the Paris and Prague trains can change length on the "
         "route (rulebook §5) and the grid does not show where.",
-        f"Whole plan, {pl['days']} days ({pl['first']} to {pl['last']}), hard-rule flags: "
-        + ", ".join(f"{k} {n}" for k, n in sorted(pl["hard_violations"].items(), key=lambda x: -x[1])) + ".",
+        f"Whole plan, {pl['days']} days ({pl['first']} to {pl['last']}), rule flags: "
+        + ", ".join(f"{k} {n}" for k, n in sorted(pl["hard_violations"].items(), key=lambda x: -x[1]) if k != "product_matches_car") + ".",
+        f"Separately, {pl['hard_violations'].get('product_matches_car', 0)} cells carry a product code that does not fit "
+        "the car type in the rulebook's table. Most are a seating type the rulebook does not list — a grid inconsistency "
+        "to tidy, not a rule broken.",
     ]
     for k, ex in pl["future_examples"].items():
         if ex:
@@ -55,7 +58,10 @@ def _validation():
         f"{ops['over_120']} more than 120. {ops['pax_on_late_trains']:,} passengers were on those trains.")
     facts.append(
         f"Refund exposure on those arrivals: about €{ops['refund_exposure_eur']:,} — an estimate: 25 % / 50 % refund "
-        f"(rulebook) x passengers (log) x the assumed €{v['ops']['avg_fare_eur']} average fare. Not a saving claim.")
+        f"(rulebook) x the log's own count of passengers more than 1 h late ({ops.get('late_rows_with_logged_count', 0)} "
+        f"of {ops['over_60']} late arrivals have one; the rest count everyone aboard) x the assumed "
+        f"€{v['ops']['avg_fare_eur']} average fare. Ceiling if everyone aboard claimed: "
+        f"€{ops.get('refund_upper_bound_eur', 0):,}. Not a saving claim.")
     return {"headline": f"{n_fut} conflicts are written into the plan ahead of today — found in under 2 seconds",
             "facts": facts}
 
