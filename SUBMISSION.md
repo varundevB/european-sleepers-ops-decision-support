@@ -35,3 +35,6 @@ Week 3-4: write the chosen option back to the planning grid and send the German 
 - The decision is sealed in the browser (sha256, chained after the build's last audit entry) and is not written back to the log file. Documents are drafted only; the tool does not send or receive messages. The planner can mark a message confirmed by hand; that mark lives in the browser session and is not sealed.
 - The audit log is a hash-chained file, not a database. A hash chain proves order and integrity, not truth.
 - Case types: car defect and the Friday pre-positioning case are built; the rest are marked partly built or not built on the case-file page.
+- CO2 per action is an order-of-magnitude estimate (reference/co2.json): shunting minutes, litres per train-km and electricity per train-km are our assumptions, and distances are straight-line × 1.3, not track length. Where a start or end place is missing the figure is left out, not set to zero.
+- "Saves" on an action is the gap to the dearest feasible action, from the same estimated prices.
+- The car strip is the order sheet's row order for that date; which end the locomotive is on is not in the data.

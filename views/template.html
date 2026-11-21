@@ -407,7 +407,7 @@ function renderCall(){
       h("span", {class:"meta"}, tags, o.eur != null ? h("span", {text:split(o)}) : h("span", {text:"not priced"}),
         off ? null : h("span", {text:tidy((o.shunting_moves || 0) + " moves") + " · +" + (o.delay_min || 0) + " min"}),
         !off && dear != null && o.eur != null && o.eur < dear ? h("span", {class:"saves", text:"SAVES " + eur(dear - o.eur) + " EST."}) : null,
-        o.co2 && o.co2.kg != null ? h("span", {text:Math.round(o.co2.kg).toLocaleString("en") + " kg CO₂ est."}) : null, more("Detail", "action/" + o.id)));
+        !off && o.co2 && o.co2.kg != null ? h("span", {title:o.co2.note || "", text:Math.round(o.co2.kg).toLocaleString("en") + " kg CO₂ est."}) : null, more("Detail", "action/" + o.id)));
   });
   const kids = [h("div", {}, rows)];
   if (S.recorded){
